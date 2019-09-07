@@ -1,4 +1,4 @@
-package server
+package xadmission
 
 import (
 	"bytes"
@@ -14,14 +14,6 @@ import (
 
 	"github.com/go-kit/kit/log"
 )
-
-func Run(server *http.Server, logger log.Logger) {
-	logger.Log("event", "server started", "address", server.Addr)
-	if err := server.ListenAndServe(); err != nil {
-		logger.Log("error", "server error", "cause", err, "address", server.Addr)
-		os.Exit(-2)
-	}
-}
 
 func AwaitGracefulShutdown(svr *http.Server, logger log.Logger, timeout time.Duration) {
 	gracefulStop := make(chan os.Signal, 1)
@@ -46,7 +38,6 @@ func NoOpHandler() http.Handler {
 	})
 }
 
-
 func RespondJson(w http.ResponseWriter, code int, content interface{}) error {
 	var buf bytes.Buffer
 	err := json.NewEncoder(&buf).Encode(content)
@@ -56,6 +47,6 @@ func RespondJson(w http.ResponseWriter, code int, content interface{}) error {
 	w.Header().Set("Content-Type", JSONContentType)
 	w.Header().Set("Content-Length", strconv.Itoa(buf.Len()))
 	w.WriteHeader(code)
-	_, _ = io.Copy(w, &buf)
-	return nil
+	_, err = io.Copy(w, &buf)
+	return err
 }

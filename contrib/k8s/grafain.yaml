@@ -1,0 +1,128 @@
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: grafain
+spec:
+  selector:
+    matchLabels:
+      app: grafain
+  minAvailable: 1
+---
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: grafain
+  namespace: default
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: StatefulSet
+    name: grafain
+  minReplicas: 1
+  maxReplicas: 1
+  targetCPUUtilizationPercentage: 86
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: grafain
+  labels:
+    app: grafain
+    component: core
+spec:
+  serviceName: grafain
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafain
+  updateStrategy:
+    type: RollingUpdate
+  podManagementPolicy: Parallel
+  template:
+    metadata:
+      labels:
+        app: grafain
+        component: core
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "26660"
+    spec:
+      serviceAccountName: grafain
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 2000
+        fsGroup: 2000
+      terminationGracePeriodSeconds: 30
+      restartPolicy: Always
+      containers:
+      - name: grafain
+        imagePullPolicy: Always
+        image: alpetest/grafain:manual
+        args:
+#          - '-home=/data'
+#          - start
+#          - '-bind=unix:///socks/app.sock'
+        ports:
+          - containerPort: 8443
+            name: https
+        volumeMounts:
+          - name: tmdir
+            mountPath: /data
+          - name: tls-certs
+            mountPath: /certs
+#        readinessProbe:
+#          httpGet:
+#            path: /healthz
+#            port: http
+#          initialDelaySeconds: 10
+#          timeoutSeconds: 2
+#        livenessProbe:
+#          httpGet:
+#            path: /healthz
+#            port: http
+#          initialDelaySeconds: 5
+#          timeoutSeconds: 2
+        securityContext:
+          readOnlyRootFilesystem: true
+        resources:
+          limits:
+            cpu: 500m
+            memory: 1Gi
+          requests:
+            cpu: 250m
+            memory: 512Mi
+      volumes:
+        - name: tls-certs
+          secret:
+            secretName: tls-grafain
+#            defaultMode: 0400
+#      - name: tm-configuration
+#        configMap:
+#          name: grafain-tendermint-config
+  volumeClaimTemplates:
+  - metadata:
+      name: tmdir
+    spec:
+      accessModes:
+        - ReadWriteOnce
+      storageClassName: standard
+      resources:
+        requests:
+          storage: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafain
+  labels:
+    app: grafain
+    component: core
+spec:
+  ports:
+  - port: 443
+    name: https
+    protocol: TCP
+    targetPort: 8443
+  selector:
+    app: grafain

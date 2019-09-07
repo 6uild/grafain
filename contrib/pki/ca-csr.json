@@ -1,0 +1,16 @@
+{
+  "CN": "grafain",
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "",
+      "L": "",
+      "O": "Grafain",
+      "OU": "",
+      "ST": ""
+    }
+  ]
+}

@@ -1,7 +1,8 @@
 .PHONY: all build test image tf clean dist lint deps
 
 BUILD_VERSION ?= manual
-BUILD_FLAGS := -a -ldflags '-extldflags "-static"  -X main.version=${BUILD_VERSION}'
+DIST_SRC=$(pwd)/$(go list -m)
+LDFLAGS=-extldflags=-static -X main.version=${BUILD_VERSION} -s -w
 BUILDOUT ?= grafain
 IMAGE_NAME = "alpetest/grafain:${BUILD_VERSION}"
 
@@ -13,7 +14,12 @@ clean:
 	rm -f ${BUILDOUT}
 
 build:
-	GOARCH=amd64 CGO_ENABLED=0 GOOS=linux go build $(BUILD_FLAGS) -o $(BUILDOUT) .
+	GOARCH=amd64 CGO_ENABLED=0 GOOS=linux go build -a \
+	        -gcflags=all=-trimpath=${DIST_SRC} \
+	        -asmflags=all=-trimpath=${DIST_SRC} \
+	        -mod=readonly -tags "netgo" \
+	        -ldflags="${LDFLAGS}" \
+	        -o $(BUILDOUT) ./cmd/grafain
 
 image:
 	docker build --pull -t $(IMAGE_NAME) .

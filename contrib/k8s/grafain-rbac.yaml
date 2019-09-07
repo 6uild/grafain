@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: grafain
+  namespace: default
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: grafain
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: unpriviledged
+subjects:
+- kind: ServiceAccount
+  name: grafain
+  namespace: default

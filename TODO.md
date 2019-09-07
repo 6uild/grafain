@@ -1,4 +1,4 @@
 # To Do
-- [ ] ssl termination
+- [x] ssl termination
 - [ ] add prometheus metrics
 - [ ] CI build to push to docker hub
