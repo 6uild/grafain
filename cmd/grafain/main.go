@@ -1,10 +1,13 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"flag"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/alpe/grafain/pkg/xadmission"
@@ -39,26 +42,26 @@ func main() {
 
 	defer recoverToLog(logger)
 	mux := http.NewServeMux()
-	mux.Handle("/healthz", xadmission.NoOpHandler())
+	mux.Handle("/healthz", NoOpHandler())
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		xadmission.ReviewHandler(w, r, log.With(logger, "component", "hook"))
 	})
 
 	svr := &http.Server{
-		Addr: *serverAddress,
+		Addr:    *serverAddress,
 		Handler: mux,
 		TLSConfig: &tls.Config{
 			ClientAuth: tls.NoClientCert,
 		},
 	}
-	go func(){
+	go func() {
 		level.Info(logger).Log("message", "server started", "address", svr.Addr)
 		if err := svr.ListenAndServeTLS(*tlsCertFile, *tlsKeyFile); err != nil {
 			level.Error(logger).Log("message", "server error", "cause", err, "address", svr.Addr)
 			os.Exit(10)
 		}
 	}()
-	xadmission.AwaitGracefulShutdown(svr, logger, 9*time.Second)
+	awaitGracefulShutdown(svr, logger, 9*time.Second)
 }
 
 func recoverToLog(logger log.Logger) {
@@ -66,4 +69,27 @@ func recoverToLog(logger log.Logger) {
 		level.Error(logger).Log("message", "Recover from panic", "cause", err)
 		os.Exit(1)
 	}
+}
+
+func awaitGracefulShutdown(svr *http.Server, logger log.Logger, timeout time.Duration) {
+	gracefulStop := make(chan os.Signal, 1)
+	signal.Notify(gracefulStop, os.Interrupt, syscall.SIGTERM)
+	<-gracefulStop
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	logger.Log("info", "Server shutdown", "timeout", timeout)
+
+	if err := svr.Shutdown(ctx); err != nil {
+		logger.Log("error", "server error", "cause", err)
+	} else {
+		logger.Log("info", "Server stopped")
+	}
+}
+
+// NoOpHandler returns 200 code only. This handler can be used for handling probe requests.
+func NoOpHandler() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
 }

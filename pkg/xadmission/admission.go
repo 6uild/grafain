@@ -1,9 +1,13 @@
 package xadmission
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
@@ -12,11 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 )
-
-const JSONContentType = "application/json"
-
-// Define constants for metav1.Status.Status
-// See https://github.com/kubernetes/kubernetes/blob/release-1.1/docs/devel/api-conventions.md#response-status-kind
 
 const (
 	successMessage = "Successfully admitted."
@@ -97,4 +96,19 @@ func deserializeRequest(r *http.Request) (ar v1.AdmissionReview, err error) {
 		return ar, fmt.Errorf("admission request is empty")
 	}
 	return ar, nil
+}
+
+const JSONContentType = "application/json"
+
+func RespondJson(w http.ResponseWriter, code int, content interface{}) error {
+	var buf bytes.Buffer
+	err := json.NewEncoder(&buf).Encode(content)
+	if err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", JSONContentType)
+	w.Header().Set("Content-Length", strconv.Itoa(buf.Len()))
+	w.WriteHeader(code)
+	_, err = io.Copy(w, &buf)
+	return err
 }
