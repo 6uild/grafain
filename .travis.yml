@@ -1,0 +1,60 @@
+sudo: required
+
+language: go
+
+services:
+  - docker
+
+addons:
+  apt:
+    packages:
+      - docker-ce
+
+cache:
+  directories:
+    - $HOME/.cache/go-build
+    - $HOME/gopath/pkg/mod
+
+os:
+  - linux
+
+go:
+  - "1.12"
+
+
+env:
+  global:
+    - BUILD_VERSION=$(echo ${TRAVIS_COMMIT} | cut -c 1-10)
+    - MAIN_GO_VERSION=1.12
+    - GORACE="halt_on_error=1"
+
+script:
+  - make all;
+  - if [[ "$TRAVIS_GO_VERSION" == "$MAIN_GO_VERSION" && "$TRAVIS_OS_NAME" == "linux" ]]; then
+    release_latest=$( [[ "$TRAVIS_BRANCH" == "master" && "$TRAVIS_TAG" == "" && "$TRAVIS_PULL_REQUEST_BRANCH" == "" ]] && echo "yes" || echo "no" );
+    release_tag=$( [[ "$TRAVIS_TAG" != "" ]] && echo "yes" || echo "no" );
+
+    if [[ $release_latest == "yes" ]]; then
+    docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD";
+    docker tag  "alpetest/grafain:${BUILD_VERSION}" "alpetest/grafain:latest" ;
+    docker push "alpetest/grafain:latest";
+    docker logout;
+    fi;
+
+    if [[ $release_tag == "yes" ]]; then
+    docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD";
+    docker tag  "alpetest/grafain:${BUILD_VERSION}" "alpetest/grafain:$TRAVIS_TAG" ;
+    docker push "alpetest/grafain:$TRAVIS_TAG";
+    docker logout;
+    fi;
+    fi;
+
+
+notifications:
+  email: false
+
+# whitelist long living branches to avoid testing feature branches twice (as branch and as pull request)
+branches:
+  only:
+    - master
+    - /^v[0-9]+\.[0-9]+\.[0-9]+$/

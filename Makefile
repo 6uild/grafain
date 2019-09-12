@@ -6,7 +6,7 @@ LDFLAGS=-extldflags=-static -X main.version=${BUILD_VERSION} -s -w
 BUILDOUT ?= grafain
 IMAGE_NAME = "alpetest/grafain:${BUILD_VERSION}"
 
-all: deps dist
+all:  dist
 
 dist: clean lint test build image
 
@@ -36,6 +36,3 @@ install:
 # Test fast
 tf:
 	go test -short ./...
-
-deps:
-	dep ensure -vendor-only
