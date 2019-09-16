@@ -1,95 +1,46 @@
 package main
 
 import (
-	"context"
-	"crypto/tls"
-	"flag"
-	"net/http"
 	"os"
-	"os/signal"
-	"syscall"
-	"time"
 
-	"github.com/alpe/grafain/pkg/xadmission"
-	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/log/level"
+	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
-// application version, will be set during compilation time
-var version string
-
+// Proof of concept without controller handling
+// - reconciler
+// - watch
 func main() {
-	var (
-		serverAddress = flag.String("server-port", "0.0.0.0:8443", "Server address for incoming connections.")
-		tlsCertFile   = flag.String("tls-cert", "/certs/tls.crt", "TLS certificate file.")
-		tlsKeyFile    = flag.String("tls-key", "/certs/tls.key", "TLS key file.")
-	)
-	flag.Parse()
-	logger := log.NewJSONLogger(log.NewSyncWriter(os.Stdout))
-	logger = log.With(logger, "ts", log.DefaultTimestampUTC, "caller", log.DefaultCaller, "version", version)
-	if len(*serverAddress) == 0 {
-		level.Error(logger).Log("message", "Server address must not be empty")
-		os.Exit(1)
-	}
-	if len(*tlsCertFile) == 0 {
-		level.Error(logger).Log("message", "tls-cert must not be empty")
-		os.Exit(1)
-	}
-	if len(*tlsKeyFile) == 0 {
-		level.Error(logger).Log("message", "tls-key must not be empty")
+	var logger = logf.Log.WithName("grafain")
+	logf.SetLogger(zap.Logger(true))
+
+	logger.Info("setting up manager")
+	mgr, err := manager.New(config.GetConfigOrDie(), manager.Options{})
+
+	if err != nil {
+		logger.Error(err, "unable to set up overall controller manager")
 		os.Exit(1)
 	}
 
-	defer recoverToLog(logger)
-	mux := http.NewServeMux()
-	mux.Handle("/healthz", NoOpHandler())
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		xadmission.ReviewHandler(w, r, log.With(logger, "component", "hook"))
+	logger.Info("setting up webhook server")
+	hookServer := mgr.GetWebhookServer()
+	hookServer.CertDir = "/certs"
+	hookServer.Port = 8443
+
+	logger.Info("registering webhooks to the webhook server")
+	hookServer.Register("/validate-v1-pod", &webhook.Admission{
+		Handler: &podValidator{logger: logger.WithName("hook")},
 	})
 
-	svr := &http.Server{
-		Addr:    *serverAddress,
-		Handler: mux,
-		TLSConfig: &tls.Config{
-			ClientAuth: tls.NoClientCert,
-		},
-	}
-	go func() {
-		level.Info(logger).Log("message", "server started", "address", svr.Addr)
-		if err := svr.ListenAndServeTLS(*tlsCertFile, *tlsKeyFile); err != nil {
-			level.Error(logger).Log("message", "server error", "cause", err, "address", svr.Addr)
-			os.Exit(10)
-		}
-	}()
-	awaitGracefulShutdown(svr, logger, 9*time.Second)
-}
-
-func recoverToLog(logger log.Logger) {
-	if err := recover(); err != nil {
-		level.Error(logger).Log("message", "Recover from panic", "cause", err)
+	logger.Info("starting manager")
+	if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
+		logger.Error(err, "unable to run manager")
 		os.Exit(1)
 	}
-}
-
-func awaitGracefulShutdown(svr *http.Server, logger log.Logger, timeout time.Duration) {
-	gracefulStop := make(chan os.Signal, 1)
-	signal.Notify(gracefulStop, os.Interrupt, syscall.SIGTERM)
-	<-gracefulStop
-
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-	logger.Log("info", "Server shutdown", "timeout", timeout)
-
-	if err := svr.Shutdown(ctx); err != nil {
-		logger.Log("error", "server error", "cause", err)
-	} else {
-		logger.Log("info", "Server stopped")
-	}
-}
-
-// NoOpHandler returns 200 code only. This handler can be used for handling probe requests.
-func NoOpHandler() http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	})
+	logger.Info("done")
 }

@@ -3,15 +3,19 @@ module github.com/alpe/grafain
 go 1.12
 
 require (
-	github.com/go-kit/kit v0.8.0
-	github.com/go-logfmt/logfmt v0.4.0 // indirect
-	github.com/go-stack/stack v1.8.0 // indirect
-	github.com/gogo/protobuf v1.3.0 // indirect
-	github.com/google/go-cmp v0.3.1 // indirect
-	github.com/stretchr/testify v1.4.0 // indirect
-	golang.org/x/net v0.0.0-20190909003024-a7b16738d86b // indirect
-	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
-	gopkg.in/inf.v0 v0.9.1 // indirect
-	k8s.io/api v0.0.0-20190905160310-fb749d2f1064
-	k8s.io/apimachinery v0.0.0-20190831074630-461753078381
+	cloud.google.com/go v0.37.1 // indirect
+	github.com/go-logr/logr v0.1.0
+	github.com/go-logr/zapr v0.1.1 // indirect
+	github.com/google/uuid v1.1.0 // indirect
+	github.com/onsi/ginkgo v1.8.0 // indirect
+	github.com/onsi/gomega v1.5.0 // indirect
+	github.com/pborman/uuid v1.2.0 // indirect
+	github.com/prometheus/client_model v0.0.0-20190129233127-fd36f4220a90 // indirect
+	github.com/prometheus/procfs v0.0.0-20190322151404-55ae3d9d5573 // indirect
+	golang.org/x/net v0.0.0-20190322120337-addf6b3196f6 // indirect
+	golang.org/x/sys v0.0.0-20190322080309-f49334f85ddc // indirect
+	google.golang.org/appengine v1.5.0 // indirect
+	k8s.io/api v0.0.0-20190409021203-6e4e0e4f393b
+	k8s.io/client-go v11.0.1-0.20190409021438-1a26190bd76a+incompatible
+	sigs.k8s.io/controller-runtime v0.2.1
 )

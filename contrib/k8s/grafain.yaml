@@ -45,7 +45,7 @@ spec:
         component: core
       annotations:
         prometheus.io/scrape: "true"
-        prometheus.io/port: "26660"
+        prometheus.io/port: "8080"
     spec:
       serviceAccountName: grafain
       securityContext:
@@ -66,6 +66,8 @@ spec:
         ports:
           - containerPort: 8443
             name: https
+          - containerPort: 8080
+            name: metrics
         volumeMounts:
           - name: tmdir
             mountPath: /data
