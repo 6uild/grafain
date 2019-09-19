@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package artifact;
+
+import "codec.proto";
+import "gogoproto/gogo.proto";
+
+message Artifact {
+  weave.Metadata metadata = 1;
+  // Container image url like`gcr.io/projectID/imagename@sha256:123456`
+  string image = 2;
+  // Hash or checksum value of a binary, or Docker Registry 2.0 digest of a container.
+  string checksum = 3;
+}
+
+message CreateArtifactMsg {
+  weave.Metadata metadata = 1;
+  string image = 2;
+  string checksum = 3;
+}
+
+message DeleteArtifactMsg {
+  weave.Metadata metadata = 1;
+  // Unique identifier
+  bytes id = 2 [(gogoproto.customname) = "ID"];
+}
