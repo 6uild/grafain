@@ -12,6 +12,7 @@ require (
 	github.com/onsi/ginkgo v1.8.0 // indirect
 	github.com/onsi/gomega v1.5.0 // indirect
 	github.com/pborman/uuid v1.2.0 // indirect
+	github.com/tendermint/tendermint v0.31.5
 	google.golang.org/appengine v1.5.0 // indirect
 	k8s.io/api v0.0.0-20190409021203-6e4e0e4f393b
 	k8s.io/client-go v11.0.1-0.20190409021438-1a26190bd76a+incompatible

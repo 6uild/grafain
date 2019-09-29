@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/go-logr/logr"
+	"github.com/tendermint/tendermint/libs/log"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
@@ -15,14 +15,14 @@ var _ inject.Client = &podValidator{}
 var _ admission.DecoderInjector = &podValidator{}
 
 type podValidator struct {
-	logger  logr.Logger
+	logger  log.Logger
 	client  client.Client
 	decoder *admission.Decoder
 }
 
 // Handle accepts all pod admission requests
 func (v *podValidator) Handle(ctx context.Context, req admission.Request) admission.Response {
-	logger := v.logger.WithValues("uid", req.UID, "kind", req.Kind.Kind, "req", req)
+	logger := v.logger.With("uid", req.UID, "kind", req.Kind.Kind, "req", req)
 	logger.Info("starting pod admission")
 	defer func() { logger.Info("finished pod admission") }()
 

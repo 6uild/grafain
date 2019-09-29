@@ -9,9 +9,12 @@ cfssl gencert \
   -profile=default \
   grafain-csr.json | cfssljson -bare grafain
 
+mv grafain.pem tls.crt
+mv grafain-key.pem tls.key
+
 kubectl create secret tls tls-grafain \
-  --cert=grafain.pem \
-  --key=grafain-key.pem
+  --cert=tls.crt \
+  --key=tls.key
 
 printf "Encoded cert for ca-bundle:\n"
 base64 --input=ca.pem

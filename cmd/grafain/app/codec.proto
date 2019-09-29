@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package bnsd;
+package grafain;
 
 import "github.com/iov-one/weave/migration/codec.proto";
 import "github.com/iov-one/weave/x/aswap/codec.proto";
