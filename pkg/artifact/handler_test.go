@@ -58,7 +58,7 @@ func TestCreateArtifact(t *testing.T) {
 	for msg, spec := range specs {
 		t.Run(msg, func(t *testing.T) {
 			db := store.MemStore()
-			migration.MustInitPkg(db, packageName)
+			migration.MustInitPkg(db, PackageName)
 			auth := &weavetest.Auth{Signers: []weave.Condition{anyBody}}
 
 			r := CreateArtifactHandler{auth: auth, b: bucket}
@@ -111,7 +111,7 @@ func TestDeleteArtifact(t *testing.T) {
 	for msg, spec := range specs {
 		t.Run(msg, func(t *testing.T) {
 			db := store.MemStore()
-			migration.MustInitPkg(db, packageName)
+			migration.MustInitPkg(db, PackageName)
 			auth := &weavetest.Auth{Signers: []weave.Condition{anyBody}}
 			bucket := NewBucket()
 			_, err := bucket.Put(db, myArtifactID, myExample)

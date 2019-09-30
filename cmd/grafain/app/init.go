@@ -8,7 +8,6 @@ import (
 	"github.com/iov-one/weave/app"
 	"github.com/iov-one/weave/coin"
 	"github.com/iov-one/weave/commands/server"
-	"github.com/iov-one/weave/crypto"
 	"github.com/iov-one/weave/migration"
 	"github.com/iov-one/weave/x/cash"
 	"github.com/iov-one/weave/x/currency"
@@ -64,9 +63,3 @@ func InlineApp(kv weave.CommitKVStore, logger log.Logger, debug bool) abci.Appli
 	base := app.NewBaseApp(store, TxDecoder, stack, nil, debug)
 	return DecorateApp(base, logger)
 }
-
-type output struct {
-	Pubkey *crypto.PublicKey  `json:"pub_key"`
-	Secret *crypto.PrivateKey `json:"secret"`
-}
-

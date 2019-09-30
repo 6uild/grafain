@@ -10,9 +10,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/alpe/grafain/pkg/artifact"
 	"github.com/iov-one/weave"
 	"github.com/iov-one/weave/app"
-	"github.com/iov-one/weave/cmd/bnsd/x/username"
 	"github.com/iov-one/weave/coin"
 	"github.com/iov-one/weave/commands/server"
 	"github.com/iov-one/weave/errors"
@@ -87,7 +87,7 @@ func Router(authFn x.Authenticator, issuer weave.Address) *app.Router {
 	sigs.RegisterRoutes(r, authFn)
 	aswap.RegisterRoutes(r, authFn, ctrl)
 	gov.RegisterRoutes(r, authFn, decodeProposalOptions, proposalOptionsExecutor(ctrl), scheduler)
-	username.RegisterRoutes(r, authFn)
+	artifact.RegisterRoutes(r, authFn)
 	return r
 }
 
@@ -109,7 +109,7 @@ func QueryRouter(minFee coin.Coin) weave.QueryRouter {
 		antiSpamQuery.RegisterQuery,
 		aswap.RegisterQuery,
 		gov.RegisterQuery,
-		username.RegisterQuery,
+		artifact.RegisterQuery,
 		cron.RegisterQuery,
 	)
 	return r

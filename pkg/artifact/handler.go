@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	packageName              = "artifact"
+	PackageName              = "artifact"
 	createArtifactCost int64 = 100
 	deleteArtifactCost int64 = 100
 )
@@ -20,7 +20,7 @@ func RegisterQuery(qr weave.QueryRouter) {
 
 // RegisterRoutes registers handlers for message processing.
 func RegisterRoutes(r weave.Registry, auth x.Authenticator) {
-	r = migration.SchemaMigratingRegistry(packageName, r)
+	r = migration.SchemaMigratingRegistry(PackageName, r)
 	bucket := NewBucket()
 	r.Handle(&CreateArtifactMsg{}, &CreateArtifactHandler{auth: auth, b: bucket})
 	r.Handle(&DeleteArtifactMsg{}, &DeleteArtifactHandler{auth: auth, b: bucket})
@@ -28,7 +28,7 @@ func RegisterRoutes(r weave.Registry, auth x.Authenticator) {
 
 type CreateArtifactHandler struct {
 	auth x.Authenticator
-	b    *ArtifactBucket
+	b    *Bucket
 }
 
 // Check just verifies it is properly formed and returns the cost of executing it.
@@ -76,7 +76,7 @@ func (h CreateArtifactHandler) validate(ctx weave.Context, db weave.KVStore, tx 
 
 type DeleteArtifactHandler struct {
 	auth x.Authenticator
-	b    *ArtifactBucket
+	b    *Bucket
 }
 
 func (h DeleteArtifactHandler) Check(ctx weave.Context, store weave.KVStore, tx weave.Tx) (*weave.CheckResult, error) {

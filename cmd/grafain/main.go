@@ -3,20 +3,17 @@ package main
 import (
 	"flag"
 	"fmt"
-	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
-	"strings"
 
 	grafain "github.com/alpe/grafain/cmd/grafain/app"
+	"github.com/alpe/grafain/cmd/grafain/xwebhook"
+	"github.com/iov-one/weave/app"
 	"github.com/iov-one/weave/commands/server"
+	"github.com/iov-one/weave/errors"
+	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/log"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
 var (
@@ -65,8 +62,9 @@ func main() {
 	case "help":
 		helpMessage()
 	case "start":
-		go startHook(*hookAddress, *certDir, *admissionPath, logger.With("module", "admission-hook"))
-		err = server.StartCmd(grafain.GenerateApp, logger, *varHome, rest)
+		appGenFactory, storage := appWithStorage()
+		go xwebhook.Start(*hookAddress, *certDir, *admissionPath, storage, logger.With("module", "admission-hook"))
+		err = server.StartCmd(appGenFactory, logger, *varHome, rest)
 	case "getblock":
 		err = server.GetBlockCmd(rest)
 	case "retry":
@@ -84,44 +82,20 @@ func main() {
 	}
 }
 
-const admissionPath = ""
-
-func startHook(serverAddress string, certDir, admissionPath string, logger log.Logger) {
-	logger.Info("setting up manager")
-	mgr, err := manager.New(config.GetConfigOrDie(), manager.Options{})
-
-	if err != nil {
-		logger.Error("unable to set up overall controller manager", "cause", err)
-		os.Exit(1)
+// the abci server is started with an application factory method.
+// within this method the storage is initialized. This function wraps
+// the factory method and sends the storage object to the returned channel to
+// allow its usage ouside of the abci server context.
+func appWithStorage() (func(options *server.Options) (abci.Application, error), chan *app.StoreApp) {
+	c := make(chan *app.StoreApp)
+	appGenHack := func(options *server.Options) (abci.Application, error) {
+		gApp, err := grafain.GenerateApp(options)
+		if err != nil {
+			return gApp, errors.Wrap(err, "failed to init grafain app")
+		}
+		c <- gApp.(app.BaseApp).StoreApp
+		close(c)
+		return gApp, err
 	}
-
-	logger.Info("setting up webhook server")
-	hookServer := mgr.GetWebhookServer()
-	hookServer.CertDir = certDir
-	parts := strings.Split(serverAddress, ":")
-	if len(parts) != 2 {
-		logger.Error("invalid address", "address", serverAddress)
-		os.Exit(1)
-	}
-	hookServer.Host = parts[0]
-	hookServer.Port, err = strconv.Atoi(parts[1])
-	if err != nil {
-		logger.Error("invalid port", "port", parts[1], "cause", err)
-		os.Exit(1)
-	}
-
-	logger.Info("registering webhooks to the webhook server")
-	hookServer.Register(admissionPath, &webhook.Admission{
-		Handler: &podValidator{logger: logger.With("module", "pod-validator")},
-	})
-	hookServer.Register("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Admission hook: " + admissionPath))
-	}))
-
-	logger.Info("starting manager", "address", serverAddress)
-	if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
-		logger.Error("unable to run manager", "cause", err)
-		os.Exit(1)
-	}
-	logger.Info("stopped")
+	return appGenHack, c
 }
