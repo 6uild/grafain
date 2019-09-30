@@ -19,11 +19,13 @@ os:
   - linux
 
 go:
-  - "1.12"
+  - 1.12
+  - tip
 
 
 env:
   global:
+    - GO111MODULE="on"
     - BUILD_VERSION=$(echo ${TRAVIS_COMMIT} | cut -c 1-10)
     - MAIN_GO_VERSION=1.12
     - GORACE="halt_on_error=1"
@@ -57,4 +59,5 @@ notifications:
 branches:
   only:
     - master
-    - /^v[0-9]+\.[0-9]+\.[0-9]+$/
+    - /^v[0-9]+\.[0-9]+\.x$/        # release branches
+    - /^v[0-9]+\.[0-9]+\.[0-9]+$/   # release tags
