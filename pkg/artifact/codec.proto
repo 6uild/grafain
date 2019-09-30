@@ -7,20 +7,27 @@ import "gogoproto/gogo.proto";
 
 message Artifact {
   weave.Metadata metadata = 1;
+  // Owner is the address that is allowed ot modify or delete this entity.
+  bytes owner = 2 [(gogoproto.casttype) = "github.com/iov-one/weave.Address"];
   // Container image url like`gcr.io/projectID/imagename@sha256:123456`
-  string image = 2;
+  string image = 3;
   // Hash or checksum value of a binary, or Docker Registry 2.0 digest of a container.
-  string checksum = 3;
+  string checksum = 4;
 }
 
 message CreateArtifactMsg {
   weave.Metadata metadata = 1;
+  // Container image url like`gcr.io/projectID/imagename@sha256:123456`
   string image = 2;
+  // Hash or checksum value of a binary, or Docker Registry 2.0 digest of a container.
   string checksum = 3;
+  // Owner is the address that is allowed ot modify or delete this entity.
+  // It is an optional field. When empty the main signer becomes owner.
+  bytes owner = 4 [(gogoproto.casttype) = "github.com/iov-one/weave.Address"];
 }
 
 message DeleteArtifactMsg {
   weave.Metadata metadata = 1;
-  // Unique identifier
+  // Unique identifier of the Artifact
   bytes id = 2 [(gogoproto.customname) = "ID"];
 }

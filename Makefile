@@ -16,7 +16,8 @@ WEAVEDIR=$(shell go list -m -f '{{.Dir}}' github.com/iov-one/weave)
 
 all:  dist
 
-dist: clean lint test build image
+# dist: clean lint test build image
+dist: build image
 
 clean:
 	rm -f ${BUILDOUT}
@@ -52,7 +53,6 @@ protofmt:
 	$(PROTOTOOL) format -w
 
 protodocs:
-	# TODO: fix compilation steps and add back to protoc
 	./contrib/protodocs/build_protodocs.sh docs/proto
 
 protoc: protolint protofmt

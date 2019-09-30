@@ -6,7 +6,7 @@ import (
 	"github.com/iov-one/weave/orm"
 )
 
-type ArtifactBucket struct {
+type Bucket struct {
 	orm.ModelBucket
 }
 
@@ -15,10 +15,12 @@ const bucketName = "artifact"
 
 var artifactIDSeq = orm.NewSequence(bucketName, "id")
 
-func NewBucket() *ArtifactBucket {
-	b := orm.NewModelBucket(bucketName, &Artifact{}, orm.WithIDSequence(artifactIDSeq), orm.WithIndex(imageIndex, indexImage, true))
-	return &ArtifactBucket{
-		ModelBucket: migration.NewModelBucket(packageName, b),
+func NewBucket() *Bucket {
+	b := orm.NewModelBucket(bucketName, &Artifact{}, orm.WithIDSequence(artifactIDSeq),
+		orm.WithIndex(imageIndex, indexImage, true),
+	)
+	return &Bucket{
+		ModelBucket: migration.NewModelBucket(PackageName, b),
 	}
 }
 

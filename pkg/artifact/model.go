@@ -12,13 +12,14 @@ func init() {
 	migration.MustRegister(1, &Artifact{}, migration.NoModification)
 }
 
-var isChecksum = regexp.MustCompile(`^[0-9a-zA-Z]{16,64}$`).MatchString
+var isChecksum = regexp.MustCompile(`^[0-9a-zA-Z]{1,64}$`).MatchString
 
 var _ orm.Model = (*Artifact)(nil)
 
 func (m *Artifact) Validate() error {
 	var errs error
 	errs = errors.AppendField(errs, "Metadata", m.Metadata.Validate())
+	errs = errors.AppendField(errs, "owner", m.Owner.Validate())
 	switch l := len(m.Image); {
 	case l == 0:
 		errs = errors.AppendField(errs, "Image", errors.ErrEmpty)
