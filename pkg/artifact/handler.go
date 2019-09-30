@@ -55,6 +55,7 @@ func (h CreateArtifactHandler) Deliver(ctx weave.Context, db weave.KVStore, tx w
 		Metadata: &weave.Metadata{},
 		Image:    msg.Image,
 		Checksum: msg.Checksum,
+		Owner:    msg.Owner,
 	}
 	if _, err := h.b.Put(db, id, artifact); err != nil {
 		return nil, errors.Wrap(err, "failed to store artifact")
@@ -69,6 +70,14 @@ func (h CreateArtifactHandler) validate(ctx weave.Context, db weave.KVStore, tx 
 
 	if err := weave.LoadMsg(tx, &msg); err != nil {
 		return nil, errors.Wrap(err, "load msg")
+	}
+
+	if msg.Owner != nil {
+		if !h.auth.HasAddress(ctx, msg.Owner) {
+			return nil, errors.Wrap(errors.ErrUnauthorized, "owner's signature required")
+		}
+	} else {
+		msg.Owner = x.MainSigner(ctx, h.auth).Address()
 	}
 
 	return &msg, nil
@@ -108,6 +117,9 @@ func (h DeleteArtifactHandler) validate(ctx weave.Context, db weave.KVStore, tx 
 	if err := h.b.One(db, msg.ID, &a); err != nil {
 		return nil, errors.Wrap(err, "cannot load artifact entity from the store")
 	}
-	// POC does not check authZ with artifact
+	if !h.auth.HasAddress(ctx, a.Owner) {
+		return nil, errors.Wrap(errors.ErrUnauthorized, "owner's signature required")
+	}
+
 	return &msg, nil
 }

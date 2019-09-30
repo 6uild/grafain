@@ -13,6 +13,7 @@ import (
 )
 
 func TestCreateArtifact(t *testing.T) {
+	alice := weavetest.NewCondition()
 	anyBody := weavetest.NewCondition()
 	bucket := NewBucket()
 
@@ -27,13 +28,39 @@ func TestCreateArtifact(t *testing.T) {
 				Metadata: &weave.Metadata{Schema: 1},
 				Image:    "example/image:version",
 				Checksum: "anyValidChecksum",
+				Owner:    alice.Address(),
 			},
 			expPersisted: func(t *testing.T, db weave.KVStore, res *weave.DeliverResult) {
 				var l Artifact
 				assert.Nil(t, bucket.One(db, res.Data, &l))
 				assert.Equal(t, "example/image:version", l.Image)
 				assert.Equal(t, "anyValidChecksum", l.Checksum)
+				assert.Equal(t, alice.Address(), l.Owner)
 			},
+		},
+		"main signer becomes owner when empty": {
+			src: &CreateArtifactMsg{
+				Metadata: &weave.Metadata{Schema: 1},
+				Image:    "example/image:version",
+				Checksum: "anyValidChecksum",
+			},
+			expPersisted: func(t *testing.T, db weave.KVStore, res *weave.DeliverResult) {
+				var l Artifact
+				assert.Nil(t, bucket.One(db, res.Data, &l))
+				assert.Equal(t, "example/image:version", l.Image)
+				assert.Equal(t, "anyValidChecksum", l.Checksum)
+				assert.Equal(t, alice.Address(), l.Owner)
+			},
+		},
+		"owner must sign on create": {
+			src: &CreateArtifactMsg{
+				Metadata: &weave.Metadata{Schema: 1},
+				Image:    "example/image:version",
+				Checksum: "anyValidChecksum",
+				Owner:    anyBody.Address(),
+			},
+			expCheckErr:   errors.ErrUnauthorized,
+			expDeliverErr: errors.ErrUnauthorized,
 		},
 		"empty image should be rejected": {
 			src: &CreateArtifactMsg{
@@ -59,7 +86,7 @@ func TestCreateArtifact(t *testing.T) {
 		t.Run(msg, func(t *testing.T) {
 			db := store.MemStore()
 			migration.MustInitPkg(db, PackageName)
-			auth := &weavetest.Auth{Signers: []weave.Condition{anyBody}}
+			auth := &weavetest.Auth{Signers: []weave.Condition{alice}}
 
 			r := CreateArtifactHandler{auth: auth, b: bucket}
 			cache := db.CacheWrap()
@@ -86,16 +113,19 @@ func TestCreateArtifact(t *testing.T) {
 }
 
 func TestDeleteArtifact(t *testing.T) {
+	alice := weavetest.NewCondition()
 	anyBody := weavetest.NewCondition()
 	myExample := &Artifact{
 		Metadata: &weave.Metadata{Schema: 1},
 		Image:    "example/image:version",
 		Checksum: "anyValidChecksum",
+		Owner:    alice.Address(),
 	}
 
 	myArtifactID := weavetest.SequenceID(1)
 	specs := map[string]struct {
 		src           *DeleteArtifactMsg
+		signer        weave.Condition
 		expCheckErr   *errors.Error
 		expDeliverErr *errors.Error
 		expDeleted    bool
@@ -105,15 +135,27 @@ func TestDeleteArtifact(t *testing.T) {
 				Metadata: &weave.Metadata{Schema: 1},
 				ID:       myArtifactID,
 			},
+			signer:     alice,
 			expDeleted: true,
+		},
+		"requires owner authz": {
+			src: &DeleteArtifactMsg{
+				Metadata: &weave.Metadata{Schema: 1},
+				ID:       myArtifactID,
+			},
+			signer:        anyBody,
+			expCheckErr:   errors.ErrUnauthorized,
+			expDeliverErr: errors.ErrUnauthorized,
+			expDeleted:    false,
 		},
 	}
 	for msg, spec := range specs {
 		t.Run(msg, func(t *testing.T) {
 			db := store.MemStore()
 			migration.MustInitPkg(db, PackageName)
-			auth := &weavetest.Auth{Signers: []weave.Condition{anyBody}}
+			auth := &weavetest.Auth{Signers: []weave.Condition{spec.signer}}
 			bucket := NewBucket()
+
 			_, err := bucket.Put(db, myArtifactID, myExample)
 			assert.Nil(t, err)
 

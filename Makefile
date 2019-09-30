@@ -53,7 +53,6 @@ protofmt:
 	$(PROTOTOOL) format -w
 
 protodocs:
-	# TODO: fix compilation steps and add back to protoc
 	./contrib/protodocs/build_protodocs.sh docs/proto
 
 protoc: protolint protofmt

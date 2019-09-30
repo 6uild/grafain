@@ -7,6 +7,7 @@ import (
 	fmt "fmt"
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
+	github_com_iov_one_weave "github.com/iov-one/weave"
 	weave "github.com/iov-one/weave"
 	io "io"
 	math "math"
@@ -25,10 +26,12 @@ const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
 
 type Artifact struct {
 	Metadata *weave.Metadata `protobuf:"bytes,1,opt,name=metadata,proto3" json:"metadata,omitempty"`
+	// Owner is the address that is allowed ot modify or delete this entity.
+	Owner github_com_iov_one_weave.Address `protobuf:"bytes,2,opt,name=owner,proto3,casttype=github.com/iov-one/weave.Address" json:"owner,omitempty"`
 	// Container image url like`gcr.io/projectID/imagename@sha256:123456`
-	Image string `protobuf:"bytes,2,opt,name=image,proto3" json:"image,omitempty"`
+	Image string `protobuf:"bytes,3,opt,name=image,proto3" json:"image,omitempty"`
 	// Hash or checksum value of a binary, or Docker Registry 2.0 digest of a container.
-	Checksum string `protobuf:"bytes,3,opt,name=checksum,proto3" json:"checksum,omitempty"`
+	Checksum string `protobuf:"bytes,4,opt,name=checksum,proto3" json:"checksum,omitempty"`
 }
 
 func (m *Artifact) Reset()         { *m = Artifact{} }
@@ -71,6 +74,13 @@ func (m *Artifact) GetMetadata() *weave.Metadata {
 	return nil
 }
 
+func (m *Artifact) GetOwner() github_com_iov_one_weave.Address {
+	if m != nil {
+		return m.Owner
+	}
+	return nil
+}
+
 func (m *Artifact) GetImage() string {
 	if m != nil {
 		return m.Image
@@ -87,8 +97,13 @@ func (m *Artifact) GetChecksum() string {
 
 type CreateArtifactMsg struct {
 	Metadata *weave.Metadata `protobuf:"bytes,1,opt,name=metadata,proto3" json:"metadata,omitempty"`
-	Image    string          `protobuf:"bytes,2,opt,name=image,proto3" json:"image,omitempty"`
-	Checksum string          `protobuf:"bytes,3,opt,name=checksum,proto3" json:"checksum,omitempty"`
+	// Container image url like`gcr.io/projectID/imagename@sha256:123456`
+	Image string `protobuf:"bytes,2,opt,name=image,proto3" json:"image,omitempty"`
+	// Hash or checksum value of a binary, or Docker Registry 2.0 digest of a container.
+	Checksum string `protobuf:"bytes,3,opt,name=checksum,proto3" json:"checksum,omitempty"`
+	// Owner is the address that is allowed ot modify or delete this entity.
+	// It is an optional field. When empty the main signer becomes owner.
+	Owner github_com_iov_one_weave.Address `protobuf:"bytes,4,opt,name=owner,proto3,casttype=github.com/iov-one/weave.Address" json:"owner,omitempty"`
 }
 
 func (m *CreateArtifactMsg) Reset()         { *m = CreateArtifactMsg{} }
@@ -145,9 +160,16 @@ func (m *CreateArtifactMsg) GetChecksum() string {
 	return ""
 }
 
+func (m *CreateArtifactMsg) GetOwner() github_com_iov_one_weave.Address {
+	if m != nil {
+		return m.Owner
+	}
+	return nil
+}
+
 type DeleteArtifactMsg struct {
 	Metadata *weave.Metadata `protobuf:"bytes,1,opt,name=metadata,proto3" json:"metadata,omitempty"`
-	// Unique identifier
+	// Unique identifier of the Artifact
 	ID []byte `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
 }
 
@@ -207,22 +229,26 @@ func init() {
 func init() { proto.RegisterFile("pkg/artifact/codec.proto", fileDescriptor_70e009d59e0e13f6) }
 
 var fileDescriptor_70e009d59e0e13f6 = []byte{
-	// 226 bytes of a gzipped FileDescriptorProto
+	// 295 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0x92, 0x28, 0xc8, 0x4e, 0xd7,
 	0x4f, 0x2c, 0x2a, 0xc9, 0x4c, 0x4b, 0x4c, 0x2e, 0xd1, 0x4f, 0xce, 0x4f, 0x49, 0x4d, 0xd6, 0x2b,
 	0x28, 0xca, 0x2f, 0xc9, 0x17, 0xe2, 0x80, 0x89, 0x4a, 0x71, 0x23, 0x09, 0x4b, 0x89, 0xa4, 0xe7,
-	0xa7, 0xe7, 0x83, 0x99, 0xfa, 0x20, 0x16, 0x44, 0x54, 0x29, 0x93, 0x8b, 0xc3, 0x11, 0xaa, 0x5c,
-	0x48, 0x9b, 0x8b, 0x23, 0x37, 0xb5, 0x24, 0x31, 0x25, 0xb1, 0x24, 0x51, 0x82, 0x51, 0x81, 0x51,
-	0x83, 0xdb, 0x88, 0x5f, 0xaf, 0x3c, 0x35, 0xb1, 0x2c, 0x55, 0xcf, 0x17, 0x2a, 0x1c, 0x04, 0x57,
-	0x20, 0x24, 0xc2, 0xc5, 0x9a, 0x99, 0x9b, 0x98, 0x9e, 0x2a, 0xc1, 0xa4, 0xc0, 0xa8, 0xc1, 0x19,
-	0x04, 0xe1, 0x08, 0x49, 0x71, 0x71, 0x24, 0x67, 0xa4, 0x26, 0x67, 0x17, 0x97, 0xe6, 0x4a, 0x30,
-	0x83, 0x25, 0xe0, 0x7c, 0xa5, 0x22, 0x2e, 0x41, 0xe7, 0xa2, 0xd4, 0xc4, 0x92, 0x54, 0x98, 0x85,
-	0xbe, 0xc5, 0xe9, 0xb4, 0xb6, 0x33, 0x82, 0x4b, 0xd0, 0x25, 0x35, 0x27, 0x95, 0x02, 0x3b, 0xc5,
-	0xb8, 0x98, 0x32, 0x53, 0xc0, 0x16, 0xf2, 0x38, 0xb1, 0x3d, 0xba, 0x27, 0xcf, 0xe4, 0xe9, 0x12,
-	0xc4, 0x94, 0x99, 0xe2, 0x24, 0x71, 0xe2, 0x91, 0x1c, 0xe3, 0x85, 0x47, 0x72, 0x8c, 0x0f, 0x1e,
-	0xc9, 0x31, 0x4e, 0x78, 0x2c, 0xc7, 0x70, 0xe1, 0xb1, 0x1c, 0xc3, 0x8d, 0xc7, 0x72, 0x0c, 0x49,
-	0x6c, 0xe0, 0x90, 0x35, 0x06, 0x04, 0x00, 0x00, 0xff, 0xff, 0x80, 0x8c, 0x1b, 0x94, 0xa2, 0x01,
-	0x00, 0x00,
+	0xa7, 0xe7, 0x83, 0x99, 0xfa, 0x20, 0x16, 0x44, 0x54, 0x69, 0x29, 0x23, 0x17, 0x87, 0x23, 0x54,
+	0xbd, 0x90, 0x36, 0x17, 0x47, 0x6e, 0x6a, 0x49, 0x62, 0x4a, 0x62, 0x49, 0xa2, 0x04, 0xa3, 0x02,
+	0xa3, 0x06, 0xb7, 0x11, 0xbf, 0x5e, 0x79, 0x6a, 0x62, 0x59, 0xaa, 0x9e, 0x2f, 0x54, 0x38, 0x08,
+	0xae, 0x40, 0xc8, 0x8a, 0x8b, 0x35, 0xbf, 0x3c, 0x2f, 0xb5, 0x48, 0x82, 0x49, 0x81, 0x51, 0x83,
+	0xc7, 0x49, 0xe5, 0xd7, 0x3d, 0x79, 0x85, 0xf4, 0xcc, 0x92, 0x8c, 0xd2, 0x24, 0xbd, 0xe4, 0xfc,
+	0x5c, 0xfd, 0xcc, 0xfc, 0x32, 0xdd, 0xfc, 0xbc, 0x54, 0x7d, 0x88, 0x7e, 0xc7, 0x94, 0x94, 0xa2,
+	0xd4, 0xe2, 0xe2, 0x20, 0x88, 0x16, 0x21, 0x11, 0x2e, 0xd6, 0xcc, 0xdc, 0xc4, 0xf4, 0x54, 0x09,
+	0x66, 0x05, 0x46, 0x0d, 0xce, 0x20, 0x08, 0x47, 0x48, 0x8a, 0x8b, 0x23, 0x39, 0x23, 0x35, 0x39,
+	0xbb, 0xb8, 0x34, 0x57, 0x82, 0x05, 0x2c, 0x01, 0xe7, 0x2b, 0xad, 0x63, 0xe4, 0x12, 0x74, 0x2e,
+	0x4a, 0x4d, 0x2c, 0x49, 0x85, 0xb9, 0xd6, 0xb7, 0x38, 0x9d, 0x34, 0x07, 0xc3, 0x2d, 0x65, 0xc2,
+	0x65, 0x29, 0x33, 0xaa, 0xa5, 0x08, 0x2f, 0xb2, 0x90, 0xec, 0x45, 0xa5, 0x08, 0x2e, 0x41, 0x97,
+	0xd4, 0x9c, 0x54, 0x0a, 0xdc, 0x2b, 0xc6, 0xc5, 0x94, 0x99, 0x02, 0x0d, 0x5d, 0xb6, 0x47, 0xf7,
+	0xe4, 0x99, 0x3c, 0x5d, 0x82, 0x98, 0x32, 0x53, 0x9c, 0x24, 0x4e, 0x3c, 0x92, 0x63, 0xbc, 0xf0,
+	0x48, 0x8e, 0xf1, 0xc1, 0x23, 0x39, 0xc6, 0x09, 0x8f, 0xe5, 0x18, 0x2e, 0x3c, 0x96, 0x63, 0xb8,
+	0xf1, 0x58, 0x8e, 0x21, 0x89, 0x0d, 0x1c, 0xa7, 0xc6, 0x80, 0x00, 0x00, 0x00, 0xff, 0xff, 0x71,
+	0x0c, 0xdf, 0x32, 0x1c, 0x02, 0x00, 0x00,
 }
 
 func (m *Artifact) Marshal() (dAtA []byte, err error) {
@@ -250,14 +276,20 @@ func (m *Artifact) MarshalTo(dAtA []byte) (int, error) {
 		}
 		i += n1
 	}
-	if len(m.Image) > 0 {
+	if len(m.Owner) > 0 {
 		dAtA[i] = 0x12
+		i++
+		i = encodeVarintCodec(dAtA, i, uint64(len(m.Owner)))
+		i += copy(dAtA[i:], m.Owner)
+	}
+	if len(m.Image) > 0 {
+		dAtA[i] = 0x1a
 		i++
 		i = encodeVarintCodec(dAtA, i, uint64(len(m.Image)))
 		i += copy(dAtA[i:], m.Image)
 	}
 	if len(m.Checksum) > 0 {
-		dAtA[i] = 0x1a
+		dAtA[i] = 0x22
 		i++
 		i = encodeVarintCodec(dAtA, i, uint64(len(m.Checksum)))
 		i += copy(dAtA[i:], m.Checksum)
@@ -301,6 +333,12 @@ func (m *CreateArtifactMsg) MarshalTo(dAtA []byte) (int, error) {
 		i++
 		i = encodeVarintCodec(dAtA, i, uint64(len(m.Checksum)))
 		i += copy(dAtA[i:], m.Checksum)
+	}
+	if len(m.Owner) > 0 {
+		dAtA[i] = 0x22
+		i++
+		i = encodeVarintCodec(dAtA, i, uint64(len(m.Owner)))
+		i += copy(dAtA[i:], m.Owner)
 	}
 	return i, nil
 }
@@ -358,6 +396,10 @@ func (m *Artifact) Size() (n int) {
 		l = m.Metadata.Size()
 		n += 1 + l + sovCodec(uint64(l))
 	}
+	l = len(m.Owner)
+	if l > 0 {
+		n += 1 + l + sovCodec(uint64(l))
+	}
 	l = len(m.Image)
 	if l > 0 {
 		n += 1 + l + sovCodec(uint64(l))
@@ -384,6 +426,10 @@ func (m *CreateArtifactMsg) Size() (n int) {
 		n += 1 + l + sovCodec(uint64(l))
 	}
 	l = len(m.Checksum)
+	if l > 0 {
+		n += 1 + l + sovCodec(uint64(l))
+	}
+	l = len(m.Owner)
 	if l > 0 {
 		n += 1 + l + sovCodec(uint64(l))
 	}
@@ -487,6 +533,40 @@ func (m *Artifact) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Owner", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCodec
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthCodec
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthCodec
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Owner = append(m.Owner[:0], dAtA[iNdEx:postIndex]...)
+			if m.Owner == nil {
+				m.Owner = []byte{}
+			}
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Image", wireType)
 			}
 			var stringLen uint64
@@ -517,7 +597,7 @@ func (m *Artifact) Unmarshal(dAtA []byte) error {
 			}
 			m.Image = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 3:
+		case 4:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Checksum", wireType)
 			}
@@ -701,6 +781,40 @@ func (m *CreateArtifactMsg) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.Checksum = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Owner", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCodec
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthCodec
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthCodec
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Owner = append(m.Owner[:0], dAtA[iNdEx:postIndex]...)
+			if m.Owner == nil {
+				m.Owner = []byte{}
+			}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
