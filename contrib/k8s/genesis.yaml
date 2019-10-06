@@ -1,0 +1,148 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafain-genesis
+data:
+  genesis.json: |-
+    {
+      "chain_id": "grafain-demo",
+      "genesis_time": "2019-10-01T08:00:00Z",
+      "consensus_params": {
+        "block": {
+          "max_bytes": "500000",
+          "max_gas": "-1",
+          "time_iota_ms": "1000"
+        },
+        "evidence": {
+          "max_age": "100000"
+        },
+        "validator": {
+          "pub_key_types": [
+            "ed25519"
+          ]
+        }
+      },
+      "validators": [],
+      "app_hash": "",
+      "app_state": {
+        "cash": [
+        {
+          "address": "0E95C039EF14EE329D0E09D84F909CF9EB5EF472",
+          "//name": "faucet",
+          "coins": [
+          {
+            "whole": 999999999,
+            "ticker": "GRFN"
+          }
+          ]
+        }
+        ],
+        "currencies": [
+        {
+          "ticker": "GRFN",
+          "name": "Grafain utility token"
+        }
+        ],
+        "multisig": [
+        {
+          "activation_threshold": 3,
+          "admin_threshold": 3,
+          "//name": "GRFN SAS",
+          "participants": [
+          {
+            "signature": "0E95C039EF14EE329D0E09D84F909CF9EB5EF472",
+            "weight": 3
+          }
+          ]
+        }
+        ],
+        "update_validators": {
+          "addresses": [
+            "cond:gov/rule/0000000000000003"
+          ]
+        },
+        "conf": {
+          "cash": {
+            "owner": "cond:gov/rule/0000000000000002",
+            "collector_address": "cond:gov/rule/0000000000000002",
+            "minimal_fee": "0.0 GRFN"
+          },
+          "migration": {
+            "admin": "cond:gov/rule/0000000000000003",
+            "//admin": "owned by technical executors"
+          }
+        },
+        "msgfee": [],
+        "governance": {},
+        "initialize_schema": [
+        {
+          "pkg": "aswap",
+          "ver": 1
+        },
+        {
+          "pkg": "batch",
+          "ver": 1
+        },
+        {
+          "pkg": "cash",
+          "ver": 1
+        },
+        {
+          "pkg": "cron",
+          "ver": 1
+        },
+        {
+          "pkg": "currency",
+          "ver": 1
+        },
+        {
+          "pkg": "distribution",
+          "ver": 1
+        },
+        {
+          "pkg": "escrow",
+          "ver": 1
+        },
+        {
+          "pkg": "gov",
+          "ver": 1
+        },
+        {
+          "pkg": "hashlock",
+          "ver": 1
+        },
+        {
+          "pkg": "msgfee",
+          "ver": 1
+        },
+        {
+          "pkg": "multisig",
+          "ver": 1
+        },
+        {
+          "pkg": "namecoin",
+          "ver": 1
+        },
+        {
+          "pkg": "username",
+          "ver": 1
+        },
+        {
+          "pkg": "paychan",
+          "ver": 1
+        },
+        {
+          "pkg": "sigs",
+          "ver": 1
+        },
+        {
+          "pkg": "utils",
+          "ver": 1
+        },
+        {
+          "pkg": "validators",
+          "ver": 1
+        }
+        ]
+      }
+    }

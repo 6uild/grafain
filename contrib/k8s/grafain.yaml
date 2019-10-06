@@ -1,34 +1,31 @@
-apiVersion: policy/v1beta1
-kind: PodDisruptionBudget
+apiVersion: v1
+kind: Service
 metadata:
   name: grafain
 spec:
+  ports:
+    - port: 26657
+      name: rpc
   selector:
-    matchLabels:
-      app: grafain
-  minAvailable: 1
+    app: grafain
 ---
-apiVersion: autoscaling/v1
-kind: HorizontalPodAutoscaler
+apiVersion: v1
+kind: Service
 metadata:
-  name: grafain
-  namespace: default
+  name: grafain-p2p
 spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: StatefulSet
-    name: grafain
-  minReplicas: 1
-  maxReplicas: 1
-  targetCPUUtilizationPercentage: 86
+  ports:
+    - port: 26656
+      name: p2p
+      targetPort: 26656
+  selector:
+    app: grafain
+  type: LoadBalancer
 ---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: grafain
-  labels:
-    app: grafain
-    component: core
 spec:
   serviceName: grafain
   replicas: 1
@@ -42,89 +39,192 @@ spec:
     metadata:
       labels:
         app: grafain
-        component: core
-      annotations:
-        prometheus.io/scrape: "true"
-        prometheus.io/port: "8080"
     spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values: [grafain]
+              topologyKey: kubernetes.io/hostname
       serviceAccountName: grafain
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
         runAsGroup: 2000
         fsGroup: 2000
-      terminationGracePeriodSeconds: 30
-      restartPolicy: Always
+      terminationGracePeriodSeconds: 10
+      initContainers:
+        - name: init
+          imagePullPolicy: Always
+          image: iov1/tendermint:v0.31.9-iov1
+          env:
+            - name: TMHOME
+              value: /data/tendermint
+          command:
+            - bash
+            - "-c"
+          args:
+            - |
+              set -exo pipefail
+              if [ ! -f ${TMHOME}/.INITIALISED ]; then
+               mkdir -p /data/bns
+               mkdir -p ${TMHOME}/tmp
+               tendermint init
+
+               cp -f /etc/tendermint/genesis.json ${TMHOME}/config/genesis.json
+               cat ${TMHOME}/config/genesis.json > ${TMHOME}/config/genesis.json_work
+
+               # generate new key and add to genesis and local prival signer
+               tendermint gen_validator > ${TMHOME}/config/priv_validator_work.json
+               cat ${TMHOME}/config/priv_validator_work.json | jq ".Key" > ${TMHOME}/config/priv_validator_key.json
+               cat ${TMHOME}/config/priv_validator_work.json | jq ".LastSignState" > ${TMHOME}/data/priv_validator_state.json
+               cat ${TMHOME}/config/priv_validator_key.json | jq ".pub_key" | jq ". as \$k | {pub_key: \$k, power: \"10\", name: \"validator\"}" > ${TMHOME}/tmp/pub_validator.json
+               cat ${TMHOME}/config/genesis.json_work | jq ".validators |= .+ [$(cat ${TMHOME}/tmp/pub_validator.json)]" > ${TMHOME}/config/genesis.json
+
+               rm -rf ${TMHOME}/tmp
+               rm -f  ${TMHOME}/config/genesis.json_work
+               chmod 444 ${TMHOME}/config/genesis.json
+
+               touch ${TMHOME}/.INITIALISED
+              fi
+              rm -f /socks/app.sock
+          volumeMounts:
+            - name: tmdir
+              mountPath: "/data"
+            - mountPath: /etc/tendermint/genesis.json
+              name: grafain-genesis
+              subPath: genesis.json
+              readOnly: true
+            - mountPath: /socks
+              name: socksdir
+          resources:
+            limits:
+              cpu: 150m
+              memory: 150Mi
+            requests:
+              cpu: 100m
+              memory: 100Mi
       containers:
-      - name: grafain
-        imagePullPolicy: Always
-        image: alpetest/grafain:manual
-        args:
-#          - '-home=/data'
-#          - start
-#          - '-bind=unix:///socks/app.sock'
-        ports:
-          - containerPort: 8443
-            name: https
-          - containerPort: 8080
-            name: metrics
-        volumeMounts:
-          - name: tmdir
-            mountPath: /data
-          - name: tls-certs
-            mountPath: /certs
-#        readinessProbe:
-#          httpGet:
-#            path: /healthz
-#            port: http
-#          initialDelaySeconds: 10
-#          timeoutSeconds: 2
-#        livenessProbe:
-#          httpGet:
-#            path: /healthz
-#            port: http
-#          initialDelaySeconds: 5
-#          timeoutSeconds: 2
-        securityContext:
-          readOnlyRootFilesystem: true
-        resources:
-          limits:
-            cpu: 500m
-            memory: 1Gi
-          requests:
-            cpu: 250m
-            memory: 512Mi
+        - name: tendermint
+          imagePullPolicy: Always
+          image: iov1/tendermint:v0.31.9-iov1
+          ports:
+            - containerPort: 26656
+              name: p2p
+            - containerPort: 26657
+              name: rpc
+          env:
+            - name: TMHOME
+              value: /data/tendermint
+          command:
+            - bash
+            - "-c"
+            - |
+              set -exo pipefail
+
+              # wait for grafain to get started
+              while [ ! -S /socks/app.sock ]; do
+                sleep 1
+              done
+
+              exec tendermint node \
+                --moniker="`hostname`" \
+                --log_level="p2p:info,state:info,*:error" \
+                --proxy_app="unix:///socks/app.sock"
+          volumeMounts:
+            - name: tmdir
+              mountPath: /data/tendermint
+              subPath: tendermint
+#            - mountPath: /data/tendermint/config/config.toml
+#              name: tm-configuration
+#              subPath: config.toml
+#              readOnly: true
+            - name: socksdir
+              mountPath: /socks
+            - name: tm-rw-volume
+              mountPath: /tmp
+          securityContext:
+            readOnlyRootFilesystem: true
+          resources:
+            limits:
+              cpu: 550m
+              memory: 768Mi
+            requests:
+              cpu: 250m
+              memory: 512Mi
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -o
+                - pipefail
+                - -ec
+                - 'curl -s --fail http://localhost:26657/status | jq --exit-status ".result.sync_info.catching_up==false"'
+            failureThreshold: 999999
+            periodSeconds: 20
+            initialDelaySeconds: 40
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -o
+                - pipefail
+                - -ec
+                - 'curl -s --fail http://localhost:26657/abci_info | jq --exit-status ".result.response"'
+            failureThreshold: 3
+            initialDelaySeconds: 40
+            periodSeconds: 5
+            successThreshold: 1
+            timeoutSeconds: 2
+        - name: grafain
+          imagePullPolicy: Always
+          image: alpetest/grafain:latest
+          args:
+            - -home=/data/grafain
+            - -hook-certs=/certs
+            - -hook-address=0.0.0.0:8443
+            - start
+            - -bind=unix:///socks/app.sock
+          ports:
+            - containerPort: 8443
+              name: hook
+          volumeMounts:
+            - name: socksdir
+              mountPath: /socks
+            - name: tmdir
+              mountPath: /data/grafain
+              subPath: grafain
+            - name: tls-certs
+              mountPath: /certs
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 250m
+              memory: 256Mi
       volumes:
+        - name: grafain-genesis
+          configMap:
+            name: grafain-genesis
         - name: tls-certs
           secret:
             secretName: tls-grafain
 #            defaultMode: 0400
-#      - name: tm-configuration
-#        configMap:
-#          name: grafain-tendermint-config
+        - name: socksdir
+          emptyDir: {}
+        - name: tm-rw-volume
+          emptyDir: {}
   volumeClaimTemplates:
-  - metadata:
-      name: tmdir
-    spec:
-      accessModes:
-        - ReadWriteOnce
-      storageClassName: standard
-      resources:
-        requests:
-          storage: 1Gi
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: grafain
-  labels:
-    app: grafain
-    component: core
-spec:
-  ports:
-  - port: 443
-    name: https
-    protocol: TCP
-    targetPort: 8443
-  selector:
-    app: grafain
+    - metadata:
+        name: tmdir
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: standard
+        resources:
+          requests:
+            storage: 1Gi
