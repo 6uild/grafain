@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	grafain "github.com/alpe/grafain/cmd/grafain/app"
+	grafain "github.com/alpe/grafain/pkg/app"
 	"github.com/alpe/grafain/pkg/artifact"
 	"github.com/iov-one/weave"
 	"github.com/iov-one/weave/app"
@@ -13,6 +13,7 @@ import (
 	"github.com/iov-one/weave/errors"
 	"github.com/iov-one/weave/migration"
 	"github.com/iov-one/weave/store/iavl"
+	"github.com/iov-one/weave/weavetest"
 	"github.com/iov-one/weave/weavetest/assert"
 	"github.com/tendermint/tendermint/libs/log"
 	corev1 "k8s.io/api/core/v1"
@@ -30,7 +31,8 @@ func TestQueryWeave(t *testing.T) {
 	}{
 		"image exists": {
 			stored: []*artifact.Artifact{{
-				Metadata: &weave.Metadata{1},
+				Metadata: &weave.Metadata{Schema: 1},
+				Owner: weavetest.NewCondition().Address(),
 				Image:    "foo/bar:1234",
 				Checksum: "aValidChecksum",
 			}},
