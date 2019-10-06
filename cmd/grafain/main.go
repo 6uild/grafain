@@ -6,8 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
-	grafain "github.com/alpe/grafain/cmd/grafain/app"
-	"github.com/alpe/grafain/cmd/grafain/xwebhook"
+	grafain "github.com/alpe/grafain/pkg/app"
+	"github.com/alpe/grafain/pkg/webhook"
 	"github.com/iov-one/weave/app"
 	"github.com/iov-one/weave/commands/server"
 	"github.com/iov-one/weave/errors"
@@ -63,7 +63,7 @@ func main() {
 		helpMessage()
 	case "start":
 		appGenFactory, storage := appWithStorage()
-		go xwebhook.Start(*hookAddress, *certDir, *admissionPath, storage, logger.With("module", "admission-hook"))
+		go webhook.Start(*hookAddress, *certDir, *admissionPath, storage, logger.With("module", "admission-hook"))
 		err = server.StartCmd(appGenFactory, logger, *varHome, rest)
 	case "getblock":
 		err = server.GetBlockCmd(rest)

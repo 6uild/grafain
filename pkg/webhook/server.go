@@ -1,4 +1,4 @@
-package xwebhook
+package webhook
 
 import (
 	"net/http"

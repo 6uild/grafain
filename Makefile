@@ -16,8 +16,7 @@ WEAVEDIR=$(shell go list -m -f '{{.Dir}}' github.com/iov-one/weave)
 
 all:  dist
 
-# dist: clean lint test build image
-dist: build image
+dist: clean lint test build image
 
 clean:
 	rm -f ${BUILDOUT}
