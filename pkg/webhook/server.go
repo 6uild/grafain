@@ -2,43 +2,34 @@ package webhook
 
 import (
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 
 	"github.com/iov-one/weave/app"
+	"github.com/iov-one/weave/errors"
 	"github.com/tendermint/tendermint/libs/log"
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
-func Start(serverAddress string, certDir, admissionPath string, store <-chan *app.StoreApp, logger log.Logger) {
-	logger.Info("setting up manager")
-	mgr, err := manager.New(config.GetConfigOrDie(), manager.Options{})
-
-	if err != nil {
-		logger.Error("unable to set up overall controller manager", "cause", err)
-		os.Exit(1)
-	}
-
-	logger.Info("setting up webhook server")
+// Start webhook server and block.
+func Start(mgr manager.Manager, serverAddress string, certDir, admissionPath string, store <-chan *app.StoreApp, logger log.Logger) error {
+	logger.Info("Setting up webhook server")
 	hookServer := mgr.GetWebhookServer()
 	hookServer.CertDir = certDir
 	parts := strings.Split(serverAddress, ":")
 	if len(parts) != 2 {
-		logger.Error("invalid address", "address", serverAddress)
-		os.Exit(1)
+		return errors.Wrapf(errors.ErrInput, "Invalid address :%q", serverAddress)
 	}
+	var err error
 	hookServer.Host = parts[0]
 	hookServer.Port, err = strconv.Atoi(parts[1])
 	if err != nil {
-		logger.Error("invalid port", "port", parts[1], "cause", err)
-		os.Exit(1)
+		return errors.Wrapf(errors.ErrInput, "Invalid port :%q", parts[1])
 	}
 
-	logger.Info("registering webhooks to the webhook server")
+	logger.Info("Registering webhooks to the internal webhook server")
 	hookServer.Register(admissionPath, &webhook.Admission{
 		Handler: NewPodValidator(
 			<-store,
@@ -50,10 +41,10 @@ func Start(serverAddress string, certDir, admissionPath string, store <-chan *ap
 		w.Write([]byte("Admission hook: " + admissionPath))
 	}))
 
-	logger.Info("starting manager", "address", serverAddress)
+	logger.Info("Starting manager", "address", serverAddress)
 	if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
-		logger.Error("unable to run manager", "cause", err)
-		os.Exit(1)
+		return errors.Wrap(err, "Unable to run manager")
 	}
-	logger.Info("stopped")
+	logger.Info("Stopped")
+	return nil
 }

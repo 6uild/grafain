@@ -184,7 +184,7 @@ spec:
             timeoutSeconds: 2
         - name: grafain
           imagePullPolicy: Always
-          image: alpetest/grafain:latest
+          image: alpetest/grafain:manual
           args:
             - -home=/data/grafain
             - -hook-certs=/certs

@@ -14,6 +14,8 @@ import (
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/log"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 var (
@@ -63,7 +65,7 @@ func main() {
 		helpMessage()
 	case "start":
 		appGenFactory, storage := appWithStorage()
-		go webhook.Start(*hookAddress, *certDir, *admissionPath, storage, logger.With("module", "admission-hook"))
+		go startWebHook(*hookAddress, *certDir, *admissionPath, storage, logger.With("module", "admission-hook"))
 		err = server.StartCmd(appGenFactory, logger, *varHome, rest)
 	case "getblock":
 		err = server.GetBlockCmd(rest)
@@ -82,12 +84,12 @@ func main() {
 	}
 }
 
-// the abci server is started with an application factory method.
+// The abci server is started with an application factory method.
 // within this method the storage is initialized. This function wraps
 // the factory method and sends the storage object to the returned channel to
-// allow its usage ouside of the abci server context.
+// allow its usage outside of the abci server context.
 func appWithStorage() (func(options *server.Options) (abci.Application, error), chan *app.StoreApp) {
-	c := make(chan *app.StoreApp)
+	c := make(chan *app.StoreApp, 1)
 	appGenHack := func(options *server.Options) (abci.Application, error) {
 		gApp, err := grafain.GenerateApp(options)
 		if err != nil {
@@ -98,4 +100,18 @@ func appWithStorage() (func(options *server.Options) (abci.Application, error), 
 		return gApp, err
 	}
 	return appGenHack, c
+}
+
+func startWebHook(serverAddress string, certDir, admissionPath string, store <-chan *app.StoreApp, logger log.Logger) {
+	logger.Debug("Setting up manager")
+	mgr, err := manager.New(config.GetConfigOrDie(), manager.Options{})
+	if err != nil {
+		logger.Error("Unable to set up overall controller manager", "cause", err)
+		os.Exit(1)
+	}
+	err = webhook.Start(mgr, serverAddress, certDir, admissionPath, store, logger)
+	if err != nil {
+		logger.Error("Failed to start webhook server", "cause", err)
+		os.Exit(1)
+	}
 }
