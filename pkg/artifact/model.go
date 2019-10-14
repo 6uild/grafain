@@ -12,7 +12,7 @@ func init() {
 	migration.MustRegister(1, &Artifact{}, migration.NoModification)
 }
 
-var isChecksum = regexp.MustCompile(`^[0-9a-zA-Z]{1,64}$`).MatchString
+var isChecksum = regexp.MustCompile(`^[0-9a-zA-Z]{0,10}:?[0-9a-zA-Z]{1,100}$`).MatchString
 
 var _ orm.Model = (*Artifact)(nil)
 

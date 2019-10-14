@@ -15,7 +15,7 @@ var _ weave.Msg = (*CreateArtifactMsg)(nil)
 
 // Path returns the routing path for this message.
 func (CreateArtifactMsg) Path() string {
-	return "artifact/create"
+	return "artifacts/create"
 }
 
 func (m CreateArtifactMsg) Validate() error {
@@ -40,7 +40,7 @@ var _ weave.Msg = (*DeleteArtifactMsg)(nil)
 
 // Path returns the routing path for this message.
 func (DeleteArtifactMsg) Path() string {
-	return "artifact/delete"
+	return "artifacts/delete"
 }
 
 func (m DeleteArtifactMsg) Validate() error {

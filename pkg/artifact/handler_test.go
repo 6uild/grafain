@@ -181,5 +181,63 @@ func TestDeleteArtifact(t *testing.T) {
 			}
 		})
 	}
+}
 
+func TestQueries(t *testing.T) {
+	alice := weavetest.NewCondition()
+	myArtifact := &Artifact{
+		Metadata: &weave.Metadata{Schema: 1},
+		Image:    "example/image:version",
+		Checksum: "anyValidChecksum",
+		Owner:    alice.Address(),
+	}
+
+	myArtifactID := weavetest.SequenceID(1)
+	specs := map[string]struct {
+		queryPath      string
+		queryData      []byte
+		expResultCount int
+	}{
+		"find by name": {
+			queryPath:      "/artifacts/image",
+			queryData:      []byte("example/image:version"),
+			expResultCount: 1,
+		},
+		"find by id": {
+			queryPath:      "/artifacts",
+			queryData:      myArtifactID,
+			expResultCount: 1,
+		},
+		"find all": {
+			queryPath:      "/artifacts",
+			expResultCount: 1,
+		},
+		"find by unknown name": {
+			queryPath: "/artifacts/image",
+			queryData: []byte("unknown"),
+		},
+		"find by unknown id": {
+			queryPath: "/artifacts",
+			queryData: weavetest.SequenceID(9999),
+		},
+	}
+	for msg, spec := range specs {
+		t.Run(msg, func(t *testing.T) {
+			db := store.MemStore()
+			migration.MustInitPkg(db, PackageName)
+			bucket := NewBucket()
+
+			_, err := bucket.Put(db, myArtifactID, myArtifact)
+			assert.Nil(t, err)
+			qr := weave.NewQueryRouter()
+			RegisterQuery(qr)
+			h := qr.Handler(spec.queryPath)
+			if h == nil {
+				t.Fatalf("expected handler for path %q but got nil", spec.queryPath)
+			}
+			m, err := h.Query(db, weave.PrefixQueryMod, spec.queryData)
+			assert.Nil(t, err)
+			assert.Equal(t, spec.expResultCount, len(m))
+		})
+	}
 }

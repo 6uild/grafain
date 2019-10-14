@@ -38,27 +38,40 @@ func NewPodValidator(store queryStore, logger log.Logger) *podValidator {
 // Handle accepts all pod admission requests
 func (v *podValidator) Handle(ctx context.Context, req admission.Request) admission.Response {
 	logger := v.logger.With("uid", req.UID, "kind", req.Kind.Kind, "req", req)
-	logger.Info("starting pod admission")
-	defer func() { logger.Info("finished pod admission") }()
+	logger.Debug("Starting pod admission")
+	defer func() { logger.Debug("Finished pod admission") }()
 
 	pod := &corev1.Pod{}
-
 	err := v.decoder.Decode(req, pod)
 	if err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
-	logger.Info("handling pod", "pod", pod)
+	logger.Info("Handling pod", "pod", pod)
 
 	if err := v.doWithContainers(pod.Spec.Containers); err != nil {
-		return admission.Errored(http.StatusInternalServerError, err)
+		return admission.Errored(encodeErr(err))
 	}
 	if err := v.doWithContainers(pod.Spec.InitContainers); err != nil {
-		return admission.Errored(http.StatusInternalServerError, err)
+		return admission.Errored(encodeErr(err))
 	}
-	return admission.Allowed("grafain noop default")
+	return admission.Allowed("")
 }
 
-const queryPath = "/artifact/image"
+var internalToHttpCode = map[error]int32{
+	errors.ErrNotFound:     http.StatusNotFound,
+	errors.ErrUnauthorized: http.StatusUnauthorized,
+	errors.ErrDuplicate:    http.StatusConflict,
+}
+
+func encodeErr(err error) (int32, error) {
+	err = errors.Redact(err)
+	if c, ok := internalToHttpCode[err]; ok {
+		return c, err
+	}
+	return http.StatusInternalServerError, err
+}
+
+const queryPath = "/artifacts/image"
 
 func (v *podValidator) doWithContainers(containers []corev1.Container) error {
 	for _, c := range containers {

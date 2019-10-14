@@ -32,7 +32,7 @@ func TestQueryWeave(t *testing.T) {
 		"image exists": {
 			stored: []*artifact.Artifact{{
 				Metadata: &weave.Metadata{Schema: 1},
-				Owner: weavetest.NewCondition().Address(),
+				Owner:    weavetest.NewCondition().Address(),
 				Image:    "foo/bar:1234",
 				Checksum: "aValidChecksum",
 			}},
