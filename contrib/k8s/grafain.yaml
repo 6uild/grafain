@@ -6,6 +6,9 @@ spec:
   ports:
     - port: 26657
       name: rpc
+    - port: 443
+      name: hook
+      targetPort: 8443
   selector:
     app: grafain
 ---
@@ -59,7 +62,7 @@ spec:
       initContainers:
         - name: init
           imagePullPolicy: Always
-          image: iov1/tendermint:v0.31.9-iov1
+          image: iov1/tendermint:v0.31.10-iov1
           env:
             - name: TMHOME
               value: /data/tendermint
@@ -110,7 +113,7 @@ spec:
       containers:
         - name: tendermint
           imagePullPolicy: Always
-          image: iov1/tendermint:v0.31.9-iov1
+          image: iov1/tendermint:v0.31.10-iov1
           ports:
             - containerPort: 26656
               name: p2p
