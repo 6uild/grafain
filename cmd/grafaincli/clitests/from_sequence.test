@@ -1,0 +1,24 @@
+#!/bin/sh
+
+set -e
+
+grafaincli from-sequence 0000000000000001
+grafaincli from-sequence 0000000000000033
+grafaincli from-sequence 0000000000000065
+grafaincli from-sequence 0000000000000097
+grafaincli from-sequence 00000000000000c9
+grafaincli from-sequence 00000000000000fb
+grafaincli from-sequence 000000000000012d
+grafaincli from-sequence 000000000000015f
+grafaincli from-sequence 0000000000000191
+grafaincli from-sequence 00000000000001c3
+grafaincli from-sequence 00000000000001f5
+grafaincli from-sequence 0000000000000227
+grafaincli from-sequence 0000000000000259
+grafaincli from-sequence 000000000000028b
+grafaincli from-sequence 00000000000002bd
+grafaincli from-sequence 00000000000002ef
+grafaincli from-sequence 0000000000000321
+
+# Multiple sequences input is allowed as well.
+grafaincli from-sequence 0000000000000353 0000000000000385 00000000000003b7

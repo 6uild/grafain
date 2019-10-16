@@ -1,4 +1,4 @@
-package testsupport
+package client
 
 import (
 	"context"
@@ -28,7 +28,7 @@ const BroadcastTxSyncDefaultTimeOut = 15 * time.Second
 var QueryNewBlockHeader = tmtypes.EventQueryNewBlockHeader
 
 // BaseClient is a tendermint client wrapped to provide
-// simple access to the data structures used in bns.
+// simple access to the data structures used in grafain.
 type BaseClient struct {
 	conn client.Client
 	// subscriber is a unique identifier for subscriptions
@@ -37,10 +37,9 @@ type BaseClient struct {
 
 // NewClient wraps a BaseClient around an existing
 // tendermint client connection.
-func NewClient(conn client.Client) *BaseClient {
+func NewBaseClient(conn client.Client) *BaseClient {
 	return &BaseClient{
-		conn: conn,
-		// TODO: make this random
+		conn:       conn,
 		subscriber: "tools-client",
 	}
 }

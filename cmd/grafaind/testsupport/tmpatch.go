@@ -1,4 +1,4 @@
-package main
+package testsupport
 
 // In this file resides implementation a lot of private functionality from the
 // tendermint/rpc/test package. We cannot use this package directly, because it
@@ -28,7 +28,7 @@ import (
 	rpcclient "github.com/tendermint/tendermint/rpc/lib/client"
 )
 
-func buildTendermintConfig(t testing.TB, workDir string) *cfg.Config {
+func BuildTendermintConfig(t testing.TB, workDir string) *cfg.Config {
 	// Do not use rpctest.GetConfig as it is using a global variable to
 	// cache the configuration. This configuration must be unique per test
 	// as our application must always get an empty database directory
@@ -42,7 +42,7 @@ func buildTendermintConfig(t testing.TB, workDir string) *cfg.Config {
 	return c
 }
 
-func waitForRPC(t testing.TB, c *cfg.Config) {
+func WaitForRPC(t testing.TB, c *cfg.Config) {
 	t.Helper()
 	laddr := c.RPC.ListenAddress
 	client := rpcclient.NewJSONRPCClient(laddr)
@@ -59,7 +59,7 @@ func waitForRPC(t testing.TB, c *cfg.Config) {
 	}
 }
 
-func waitForGRPC(t testing.TB, c *cfg.Config) {
+func WaitForGRPC(t testing.TB, c *cfg.Config) {
 	t.Helper()
 	client := core_grpc.StartGRPCClient(c.RPC.GRPCListenAddress)
 	for {
@@ -72,7 +72,7 @@ func waitForGRPC(t testing.TB, c *cfg.Config) {
 
 // Do not use rpctest.StartTendermint or NewTendermint as they rely on a global
 // state and cannot be used more than once.
-func newTendermint(t testing.TB, config *cfg.Config, app abci.Application, logger log.Logger) *nm.Node {
+func NewTendermint(t testing.TB, config *cfg.Config, app abci.Application, logger log.Logger) *nm.Node {
 	t.Helper()
 	pvKeyFile := config.PrivValidatorKeyFile()
 	pvKeyStateFile := config.PrivValidatorStateFile()

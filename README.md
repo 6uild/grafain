@@ -1,23 +1,56 @@
-## Grafain
+# Grafain
 
 Grafain is a kubernetes policy and permission server server. It receive requests from the 
 [admission controller](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/) via webhooks
 and returns decisions based on internal rules.
-
-## Quickstart with [Minikube](https://kubernetes.io/docs/tasks/tools/install-minikube/)
-
-* `minikube start`                  - start environment
-* `kubectl apply -f contrib/k8s`    - deploy grafain components
-* `kubectl get pods`                - check grafain pod is running
-* `kubeclt logs -f grafain-0`       - watch log
-* `kubectl create deployment microbot --image=dontrebootme/microbot:v1` - deploy a random pod
+## Server
 
 
-## How to build a new docker artifact
+### Quickstart with [Minikube](https://kubernetes.io/docs/tasks/tools/install-minikube/)
+```sh
+minikube start`                  # start environment
+kubectl apply -f contrib/k8s`    # deploy grafain components
+kubectl get pods`                # check grafain pod is running
+kubeclt logs -f grafain-0`       # watch log
+kubectl create deployment microbot --image=dontrebootme/microbot:v1` # deploy a random pod -> should fail
+```
+
+## Client
+The `grafaincli` is a commend line client to interact with the running grafaind server through the Blockchain engine. 
+```sh
+# build CLI client
+go build ./cmd/grafaincli
+
+# create a new private key
+./grafaincli mnemonic | ./grafaincli keygen -key $(pwd)/my_grafain.key
+
+# set endpoint address for the grafain cli
+export GRAFAINCLI_TM_ADDR=$(minikube service grafain-rpc --url)
+
+# add a new artifact to the system
+./grafaincli create-artifact -image="foo/bar:any" -digest="anyValidDigest" \
+    | ./grafaincli sign -key=$(pwd)/my_grafain.key \
+    | ./grafaincli submit
+
+# query all artifacts
+./grafaincli query -path=/artifacts
+
+# query by image
+./grafaincli query -path=/artifacts/image -data foo/bar:any
+
+# delete artifact by internal id (=key)
+./grafaincli del-artifact -id=1 \
+    | ./grafaincli sign -key=$(pwd)/my_grafain.key \
+    | ./grafaincli submit
+```
+
+## Development
+### How to build a new docker artifacts
 
 ```sh
 make dist
 ```
+
 ## Manual test
 ```sh
 curl -X POST -k  -H "Content-Type: application/json"  -d '

@@ -19,7 +19,7 @@ os:
   - linux
 
 go:
-  - 1.12
+  - 1.13
   - tip
 
 
@@ -27,8 +27,9 @@ env:
   global:
     - GO111MODULE="on"
     - BUILD_VERSION=$(echo ${TRAVIS_COMMIT} | cut -c 1-10)
-    - MAIN_GO_VERSION=1.12
+    - MAIN_GO_VERSION=1.13
     - GORACE="halt_on_error=1"
+    - VERSION=$(git describe --tags --abbrev=9 | sed 's/^v//')
 
 script:
   - make all;
@@ -61,3 +62,17 @@ branches:
     - master
     - /^v[0-9]+\.[0-9]+\.x$/        # release branches
     - /^v[0-9]+\.[0-9]+\.[0-9]+$/   # release tags
+
+deploy:
+  provider: releases
+  api_key:
+    ${GITHUB_API_KEY}
+  file:
+    - ${TRAVIS_BUILD_DIR}/cmd/grafaind/grafaind-${VERSION}-linux-amd64.tar.gz
+    - ${TRAVIS_BUILD_DIR}/cmd/grafaind/grafaind-${VERSION}-linux-amd64.sha256
+    - ${TRAVIS_BUILD_DIR}/cmd/grafaincli/grafaincli-${VERSION}-linux-amd64.tar.gz
+    - ${TRAVIS_BUILD_DIR}/cmd/grafaincli/grafaincli-${VERSION}-linux-amd64.sha256
+  skip_cleanup: true
+  on:
+    tags: true
+    condition: $TRAVIS_TAG =~ ^v[0-9]+\.[0-9]+\.[0-9]+$

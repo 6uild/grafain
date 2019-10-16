@@ -12,7 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/alpe/grafain/cmd/grafain/testsupport"
+	"github.com/alpe/grafain/cmd/grafaind/testsupport"
+	"github.com/alpe/grafain/pkg/client"
 	"github.com/alpe/grafain/pkg/webhook"
 	"github.com/iov-one/weave"
 	weaveclient "github.com/iov-one/weave/client"
@@ -24,7 +25,7 @@ import (
 	cmn "github.com/tendermint/tendermint/libs/common"
 	"github.com/tendermint/tendermint/libs/log"
 	"github.com/tendermint/tendermint/node"
-	"github.com/tendermint/tendermint/rpc/client"
+	rpcclient "github.com/tendermint/tendermint/rpc/client"
 	tm "github.com/tendermint/tendermint/types"
 )
 
@@ -56,7 +57,7 @@ func TestEndToEndScenario(t *testing.T) {
 	alice := aliceKey.PublicKey().Address()
 
 	// configure and start tendermint node with grafain abci
-	tmConf := buildTendermintConfig(t, "scenario")
+	tmConf := testsupport.BuildTendermintConfig(t, "scenario")
 	tmConf.Moniker = "ScenarioTest"
 	initGenesis(t, tmConf.GenesisFile(), alice)
 
@@ -68,7 +69,7 @@ func TestEndToEndScenario(t *testing.T) {
 	})
 	assert.Nil(t, err)
 
-	node := newTendermint(t, tmConf, abciApp, logger.With("module", "tendermint"))
+	node := testsupport.NewTendermint(t, tmConf, abciApp, logger.With("module", "tendermint"))
 	assert.Nil(t, node.Start())
 	defer node.Stop()
 
@@ -88,26 +89,26 @@ func TestEndToEndScenario(t *testing.T) {
 	awaitTendermitUp(t, tmConf, err, node)
 
 	// now start testing grafain via abci operations
-	client := testsupport.NewClient(client.NewLocal(node))
+	gClient := client.NewClient(rpcclient.NewLocal(node))
 
 	// create artifact should succeed
-	tx := client.CreateArtifact(alice, "foo/bar:v0.0.1", "myChecksum")
-	nonce := testsupport.NewNonce(client, alice)
+	tx := gClient.CreateArtifact(alice, "foo/bar:v0.0.1", "myChecksum")
+	nonce := client.NewNonce(gClient, alice)
 	seq, err := nonce.Next()
 	assert.Nil(t, err)
-	err = testsupport.SignTx(tx, aliceKey, tmConf.ChainID(), seq)
+	err = client.SignTx(tx, aliceKey, tmConf.ChainID(), seq)
 	assert.Nil(t, err)
-	rsp := client.BroadcastTxSync(tx, time.Second)
+	rsp := gClient.BroadcastTxSync(tx, time.Second)
 	assert.Nil(t, rsp.IsError())
 
 	// then get and list artifact should succeed
-	a, err := client.GetArtifactByID(rsp.Response.DeliverTx.Data)
+	a, err := gClient.GetArtifactByID(rsp.Response.DeliverTx.Data)
 	assert.Nil(t, err)
 	assert.Equal(t, "myChecksum", a.Checksum)
 	assert.Equal(t, alice, a.Owner)
 	assert.Nil(t, err)
 
-	all, err := client.ListArtifact()
+	all, err := gClient.ListArtifact()
 	assert.Nil(t, err)
 
 	if len(all) == 0 {
@@ -129,8 +130,8 @@ func TestEndToEndScenario(t *testing.T) {
 func awaitTendermitUp(t *testing.T, tmConf *config.Config, err error, node *node.Node) {
 	t.Helper()
 	// wait for tendermit up
-	waitForGRPC(t, tmConf)
-	waitForRPC(t, tmConf)
+	testsupport.WaitForGRPC(t, tmConf)
+	testsupport.WaitForRPC(t, tmConf)
 	t.Log("Endpoints are up")
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()

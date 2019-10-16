@@ -4,8 +4,8 @@ metadata:
   name: grafain
 webhooks:
 - name: grafain.default.svc
-#  failurePolicy: Ignore
-  failurePolicy: Fail
+  failurePolicy: Ignore # for bootstrapping
+#  failurePolicy: Fail
   rules:
     - apiGroups:
         - ""

@@ -1,16 +1,27 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: grafain
+  name: grafain-rpc
 spec:
   ports:
     - port: 26657
       name: rpc
+  selector:
+    app: grafain
+  type: LoadBalancer
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafain-hook
+spec:
+  ports:
     - port: 443
       name: hook
       targetPort: 8443
   selector:
     app: grafain
+  type: LoadBalancer
 ---
 apiVersion: v1
 kind: Service
@@ -134,6 +145,7 @@ spec:
               done
 
               exec tendermint node \
+                --consensus.create_empty_blocks=false \
                 --moniker="`hostname`" \
                 --log_level="p2p:info,state:info,*:error" \
                 --proxy_app="unix:///socks/app.sock"

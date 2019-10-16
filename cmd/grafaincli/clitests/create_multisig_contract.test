@@ -1,0 +1,11 @@
+#!/bin/bash
+
+set -e
+set -o pipefail
+
+grafaincli multisig -activation 4 -admin 8 \
+	| grafaincli with-multisig-participant -weight 2 -sig "seq:foo/bar/1" \
+	| grafaincli with-multisig-participant -weight 3 -sig "seq:foo/bar/2" \
+	| grafaincli with-multisig-participant -weight 5 -sig "seq:foo/bar/3" \
+	| grafaincli with-multisig-participant -weight 6 -sig "seq:foo/bar/4" \
+	| grafaincli view
