@@ -48,7 +48,9 @@ export GRAFAINCLI_TM_ADDR=$(minikube service grafain-rpc --url)
 
 ### Manual testing the admission hook
 ```sh
-curl -X POST -k  -H "Content-Type: application/json"  -d '
+HOOK_URL=$(minikube service grafain-hook --url --https)
+
+curl -X POST -k -H "Content-Type: application/json"  -d '
 {
   "kind": "AdmissionReview",
   "apiVersion": "admission.k8s.io/v1beta1",
@@ -173,7 +175,7 @@ curl -X POST -k  -H "Content-Type: application/json"  -d '
     }
   }
 }
-'
+' ${HOOK_URL}/validate-v1-pod
 
 ```
 
