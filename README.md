@@ -8,11 +8,13 @@ and returns decisions based on internal rules.
 
 ### Quickstart with [Minikube](https://kubernetes.io/docs/tasks/tools/install-minikube/)
 ```sh
-minikube start`                  # start environment
-kubectl apply -f contrib/k8s`    # deploy grafain components
-kubectl get pods`                # check grafain pod is running
-kubeclt logs -f grafain-0`       # watch log
-kubectl create deployment microbot --image=dontrebootme/microbot:v1` # deploy a random pod -> should fail
+minikube start                  # start environment
+kubectl apply -f contrib/k8s    # deploy grafain components
+kubectl get pods                # check grafain pod is running
+kubeclt logs -f grafain-0       # watch log
+
+# deploy a random pod -> should fail
+kubectl create deployment microbot --image=dontrebootme/microbot:v1
 ```
 
 ## Client
@@ -44,14 +46,7 @@ export GRAFAINCLI_TM_ADDR=$(minikube service grafain-rpc --url)
     | ./grafaincli submit
 ```
 
-## Development
-### How to build a new docker artifacts
-
-```sh
-make dist
-```
-
-## Manual test
+### Manual testing the admission hook
 ```sh
 curl -X POST -k  -H "Content-Type: application/json"  -d '
 {
@@ -180,16 +175,36 @@ curl -X POST -k  -H "Content-Type: application/json"  -d '
 }
 '
 
-
 ```
+
+## Development
+### How to build a new docker artifacts
+
+```sh
+make dist
+```
+
+
 
 ## Other Admission Controller
 * https://github.com/IBM/portieris
 * https://github.com/open-policy-agent/gatekeeper
 * https://github.com/grafeas/kritis
 ## Other Resources
+* [Weave](https://docs.iov.one/docs/weave/welcome) abci framework
+* [Weave tutorial](https://docs.iov.one/docs/weave-tutorial/domain)
+* [Tendermint](https://github.com/tendermint/tendermint) consensus engine
 * [ValidatingWebhookConfiguration](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers)
-* [A grafeas-tutorial](https://github.com/kelseyhightower/grafeas-tutorial)
+* [A grafeas tutorial](https://github.com/kelseyhightower/grafeas-tutorial)
+
+## Disclaimer
+This project is based on the [Weave](https://github.com/iov-one/weave) framework that I worked on. It also contains
+code that was written by my colleagues for the [bnscli](https://github.com/iov-one/weave/tree/master/cmd/bnscli) and copied into this project.
+
+Special thanks therefore goes to:
+* @ethanfrey
+* @husio
+* @ruseinov   
 
 ## License
 TBD
