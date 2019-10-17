@@ -1,8 +1,24 @@
 # Grafain
 
-Grafain is a kubernetes policy and permission server server. It receive requests from the 
+Grafain is a kubernetes policy and permission admission controller webhook server. It receive requests from the 
 [admission controller](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/) via webhooks
 and returns decisions based on internal rules.
+
+What makes Grafain special is that it uses a [Blockchain](<https://en.wikipedia.org/wiki/Blockchain_(database)>) to store
+and replicate it's state. Some attributes are: 
+- [Immediate finality](https://docs.iov.one/docs/weave/basics/consensus#immediate-finality)
+- [Proof of Authority](https://en.wikipedia.org/wiki/Proof_of_authority)
+- Client [authentication](https://docs.iov.one/docs/weave/basics/authentication) via [ed25519](https://en.wikipedia.org/wiki/Curve25519) signatures
+- Reproducible [transactions](https://docs.iov.one/docs/weave/weave-api-spec/tx-sign-spec) to trigger actions or state changes
+
+At this stage the project is a `Proof Of Concept`. Most elements of the blockchain are fully implemented while the rule engine and admission policies
+for Kubernetes are not. What you can expect to work:
+- A functional [webhook server](pkg/webhook/server.go) that can handle admission requests
+- A rudimentary model to store docker [images](https://github.com/alpe/grafain/blob/master/pkg/artifact/codec.proto#L8)     
+- An [owner based permission model](https://github.com/alpe/grafain/blob/master/pkg/artifact/codec.proto#L11)      
+- A functional [command line client](cmd/grafaincli)
+- A local minikube [test environment](contrib/k8s)
+
 ## Server
 
 
