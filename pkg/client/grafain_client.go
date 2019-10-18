@@ -1,4 +1,4 @@
-package testsupport
+package client
 
 import (
 	grafain "github.com/alpe/grafain/pkg/app"
@@ -7,9 +7,18 @@ import (
 	"github.com/iov-one/weave/crypto"
 	"github.com/iov-one/weave/errors"
 	"github.com/iov-one/weave/x/sigs"
+	"github.com/tendermint/tendermint/rpc/client"
 )
 
-func (c BaseClient) CreateArtifact(owner weave.Address, image, checksum string) *grafain.Tx {
+type Client struct {
+	*BaseClient
+}
+
+func NewClient(conn client.Client) *Client {
+	return &Client{NewBaseClient(conn)}
+}
+
+func (c Client) CreateArtifact(owner weave.Address, image, checksum string) *grafain.Tx {
 	tx := &grafain.Tx{
 		Sum: &grafain.Tx_CreateArtifactMsg{
 			CreateArtifactMsg: &artifact.CreateArtifactMsg{
@@ -33,7 +42,7 @@ func SignTx(tx *grafain.Tx, signer *crypto.PrivateKey, chainID string, nonce int
 	return nil
 }
 
-func (c *BaseClient) GetArtifactByImage(name string) (*artifact.Artifact, error) {
+func (c Client) GetArtifactByImage(name string) (*artifact.Artifact, error) {
 	resp, err := c.AbciQuery("/artifacts/image", []byte(name))
 	if err != nil {
 		return nil, err
@@ -45,7 +54,7 @@ func (c *BaseClient) GetArtifactByImage(name string) (*artifact.Artifact, error)
 	return &x, x.Unmarshal(resp.Models[0].Value)
 }
 
-func (c *BaseClient) GetArtifactByID(id []byte) (*artifact.Artifact, error) {
+func (c Client) GetArtifactByID(id []byte) (*artifact.Artifact, error) {
 	resp, err := c.AbciQuery("/artifacts", id)
 	if err != nil {
 		return nil, err
@@ -57,7 +66,7 @@ func (c *BaseClient) GetArtifactByID(id []byte) (*artifact.Artifact, error) {
 	return &x, x.Unmarshal(resp.Models[0].Value)
 }
 
-func (c *BaseClient) ListArtifact() ([]artifact.Artifact, error) {
+func (c Client) ListArtifact() ([]artifact.Artifact, error) {
 	resp, err := c.AbciQuery("/artifacts"+"?"+weave.PrefixQueryMod, nil)
 	if err != nil {
 		return nil, err

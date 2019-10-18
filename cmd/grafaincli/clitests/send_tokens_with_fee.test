@@ -1,0 +1,11 @@
+#!/bin/sh
+
+set -e
+
+grafaincli send-tokens \
+		-src "seq:test/grafaincli/1" \
+		-dst "seq:test/grafaincli/2" \
+		-amount "4 IOV" \
+		-memo "grafaincli test" \
+	| grafaincli with-fee -amount "8 DOGE" \
+	| grafaincli view

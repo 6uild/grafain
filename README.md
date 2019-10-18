@@ -1,26 +1,72 @@
-## Grafain
+# Grafain
 
-Grafain is a kubernetes policy and permission server server. It receive requests from the 
+Grafain is a kubernetes policy and permission admission controller webhook server. It receive requests from the 
 [admission controller](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/) via webhooks
 and returns decisions based on internal rules.
 
-## Quickstart with [Minikube](https://kubernetes.io/docs/tasks/tools/install-minikube/)
+What makes Grafain special is that it uses a [Blockchain](<https://en.wikipedia.org/wiki/Blockchain_(database)>) to store
+and replicate it's state. Some attributes are: 
+- [Immediate finality](https://docs.iov.one/docs/weave/basics/consensus#immediate-finality)
+- [Proof of Authority](https://en.wikipedia.org/wiki/Proof_of_authority)
+- Client [authentication](https://docs.iov.one/docs/weave/basics/authentication) via [ed25519](https://en.wikipedia.org/wiki/Curve25519) signatures
+- Reproducible [transactions](https://docs.iov.one/docs/weave/weave-api-spec/tx-sign-spec) to trigger actions or state changes
 
-* `minikube start`                  - start environment
-* `kubectl apply -f contrib/k8s`    - deploy grafain components
-* `kubectl get pods`                - check grafain pod is running
-* `kubeclt logs -f grafain-0`       - watch log
-* `kubectl create deployment microbot --image=dontrebootme/microbot:v1` - deploy a random pod
+At this stage the project is a `Proof Of Concept`. Most elements of the blockchain are fully implemented while the rule engine and admission policies
+for Kubernetes are not. What you can expect to work:
+- A functional [webhook server](pkg/webhook/server.go) that can handle admission requests
+- A rudimentary model to store docker [images](https://github.com/alpe/grafain/blob/master/pkg/artifact/codec.proto#L8)     
+- An [owner based permission model](https://github.com/alpe/grafain/blob/master/pkg/artifact/codec.proto#L11)      
+- A functional [command line client](cmd/grafaincli)
+- A local minikube [test environment](contrib/k8s)
+
+## Server
 
 
-## How to build a new docker artifact
-
+### Quickstart with [Minikube](https://kubernetes.io/docs/tasks/tools/install-minikube/)
 ```sh
-make dist
+minikube start                  # start environment
+kubectl apply -f contrib/k8s    # deploy grafain components
+kubectl get pods                # check grafain pod is running
+kubeclt logs -f grafain-0       # watch log
+
+# deploy a random pod -> should fail
+kubectl create deployment microbot --image=dontrebootme/microbot:v1
 ```
-## Manual test
+
+## Client
+The `grafaincli` is a commend line client to interact with the running grafaind server through the Blockchain engine. 
 ```sh
-curl -X POST -k  -H "Content-Type: application/json"  -d '
+# build CLI client
+go build ./cmd/grafaincli
+
+# create a new private key
+./grafaincli mnemonic | ./grafaincli keygen -key $(pwd)/my_grafain.key
+
+# set endpoint address for the grafain cli
+export GRAFAINCLI_TM_ADDR=$(minikube service grafain-rpc --url)
+
+# add a new artifact to the system
+./grafaincli create-artifact -image="foo/bar:any" -digest="anyValidDigest" \
+    | ./grafaincli sign -key=$(pwd)/my_grafain.key \
+    | ./grafaincli submit
+
+# query all artifacts
+./grafaincli query -path=/artifacts
+
+# query by image
+./grafaincli query -path=/artifacts/image -data foo/bar:any
+
+# delete artifact by internal id (=key)
+./grafaincli del-artifact -id=1 \
+    | ./grafaincli sign -key=$(pwd)/my_grafain.key \
+    | ./grafaincli submit
+```
+
+### Manual testing the admission hook
+```sh
+HOOK_URL=$(minikube service grafain-hook --url --https)
+
+curl -X POST -k -H "Content-Type: application/json"  -d '
 {
   "kind": "AdmissionReview",
   "apiVersion": "admission.k8s.io/v1beta1",
@@ -145,18 +191,38 @@ curl -X POST -k  -H "Content-Type: application/json"  -d '
     }
   }
 }
-'
-
+' ${HOOK_URL}/validate-v1-pod
 
 ```
+
+## Development
+### How to build a new docker artifacts
+
+```sh
+make dist
+```
+
+
 
 ## Other Admission Controller
 * https://github.com/IBM/portieris
 * https://github.com/open-policy-agent/gatekeeper
 * https://github.com/grafeas/kritis
 ## Other Resources
+* [Weave](https://docs.iov.one/docs/weave/welcome) abci framework
+* [Weave tutorial](https://docs.iov.one/docs/weave-tutorial/domain)
+* [Tendermint](https://github.com/tendermint/tendermint) consensus engine
 * [ValidatingWebhookConfiguration](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers)
-* [A grafeas-tutorial](https://github.com/kelseyhightower/grafeas-tutorial)
+* [A grafeas tutorial](https://github.com/kelseyhightower/grafeas-tutorial)
+
+## Disclaimer
+This project is based on the [Weave](https://github.com/iov-one/weave) framework that I worked on. It also contains
+code that was written by my colleagues for the [bnscli](https://github.com/iov-one/weave/tree/master/cmd/bnscli) and copied into this project.
+
+Special thanks therefore goes to:
+* @ethanfrey
+* @husio
+* @ruseinov   
 
 ## License
 TBD

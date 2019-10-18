@@ -76,6 +76,10 @@ data:
         "governance": {},
         "initialize_schema": [
         {
+          "pkg": "artifact",
+          "ver": 1
+        },
+        {
           "pkg": "aswap",
           "ver": 1
         },

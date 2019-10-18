@@ -12,7 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/alpe/grafain/cmd/grafain/testsupport"
+	"github.com/alpe/grafain/cmd/grafaind/testsupport"
+	"github.com/alpe/grafain/pkg/client"
 	"github.com/alpe/grafain/pkg/webhook"
 	"github.com/iov-one/weave"
 	weaveclient "github.com/iov-one/weave/client"
@@ -20,17 +21,12 @@ import (
 	"github.com/iov-one/weave/crypto"
 	"github.com/iov-one/weave/weavetest/assert"
 	"github.com/iov-one/weave/x/cash"
+	"github.com/tendermint/tendermint/config"
 	cmn "github.com/tendermint/tendermint/libs/common"
 	"github.com/tendermint/tendermint/libs/log"
-	"github.com/tendermint/tendermint/rpc/client"
+	"github.com/tendermint/tendermint/node"
+	rpcclient "github.com/tendermint/tendermint/rpc/client"
 	tm "github.com/tendermint/tendermint/types"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/rest"
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-	k8runtime "sigs.k8s.io/controller-runtime/pkg/runtime/scheme"
 )
 
 const TendermintLocalAddr = "localhost:26657"
@@ -57,10 +53,12 @@ func TestEndToEndScenario(t *testing.T) {
 	logger := log.NewTMLogger(log.NewSyncWriter(os.Stdout))
 	logger = log.NewFilter(logger, log.AllowError())
 
-	tmConf := buildTendermintConfig(t, "scenario")
-	tmConf.Moniker = "ScenarioTest"
 	aliceKey := parsePrivateKey(t)
 	alice := aliceKey.PublicKey().Address()
+
+	// configure and start tendermint node with grafain abci
+	tmConf := testsupport.BuildTendermintConfig(t, "scenario")
+	tmConf.Moniker = "ScenarioTest"
 	initGenesis(t, tmConf.GenesisFile(), alice)
 
 	appGenFactory, storage := appWithStorage()
@@ -71,69 +69,46 @@ func TestEndToEndScenario(t *testing.T) {
 	})
 	assert.Nil(t, err)
 
-	hookPort, err := cmn.GetFreePort()
-	assert.Nil(t, err)
-
-	hookAddress := fmt.Sprintf("127.0.0.1:%d", hookPort)
-	_, filename, _, _ := runtime.Caller(0)
-	certDir := filepath.Join(filepath.Dir(filename), "../../contrib/pki")
-	admissionPath := "/testing"
-
-	node := newTendermint(t, tmConf, abciApp, logger.With("module", "tendermint"))
+	node := testsupport.NewTendermint(t, tmConf, abciApp, logger.With("module", "tendermint"))
 	assert.Nil(t, node.Start())
 	defer node.Stop()
 
-	go func() {
-		cfg := config.GetConfigOrDie()
-
-		gv := schema.GroupVersion{Group: "", Version: "v1"}
-		s, err := (&k8runtime.Builder{GroupVersion: gv}).Register(&corev1.Pod{}, &corev1.PodList{}).Build()
-		assert.Nil(t, err)
-
-		opts := manager.Options{
-			Scheme: s,
-			MapperProvider: func(c *rest.Config) (meta.RESTMapper, error) {
-				return testsupport.FakeMapper{}, nil
-			},
-		}
-
-		mgr, err := manager.New(cfg, opts)
-		assert.Nil(t, err)
-
+	// configure and start admission web hook
+	_, filename, _, _ := runtime.Caller(0)
+	certDir := filepath.Join(filepath.Dir(filename), "../../contrib/pki")
+	admissionPath := "/testing"
+	hookAddress := localServerAddress(t)
+	go func() { //
 		logger := node.Logger.With("module", "admission-hook")
 		logger = log.NewFilter(logger, log.AllowDebug())
-
+		mgr := testsupport.LocalManager(t)
 		assert.Nil(t, webhook.Start(mgr, hookAddress, certDir, admissionPath, storage, logger))
 
 	}()
-	waitForGRPC(t, tmConf)
-	waitForRPC(t, tmConf)
-	t.Log("Endpoints are up")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
-	_, err = weaveclient.NewLocalClient(node).WaitForNextBlock(ctx)
-	assert.Nil(t, err)
+	awaitTendermitUp(t, tmConf, err, node)
 
-	client := testsupport.NewClient(client.NewLocal(node))
-	// when create artifact
-	tx := client.CreateArtifact(alice, "foo/bar:v0.0.1", "myChecksum")
-	nonce := testsupport.NewNonce(client, alice)
+	// now start testing grafain via abci operations
+	gClient := client.NewClient(rpcclient.NewLocal(node))
+
+	// create artifact should succeed
+	tx := gClient.CreateArtifact(alice, "foo/bar:v0.0.1", "myChecksum")
+	nonce := client.NewNonce(gClient, alice)
 	seq, err := nonce.Next()
 	assert.Nil(t, err)
-	err = testsupport.SignTx(tx, aliceKey, tmConf.ChainID(), seq)
+	err = client.SignTx(tx, aliceKey, tmConf.ChainID(), seq)
 	assert.Nil(t, err)
-	rsp := client.BroadcastTxSync(tx, time.Second)
+	rsp := gClient.BroadcastTxSync(tx, time.Second)
 	assert.Nil(t, rsp.IsError())
 
-	// then
-	a, err := client.GetArtifactByID(rsp.Response.DeliverTx.Data)
+	// then get and list artifact should succeed
+	a, err := gClient.GetArtifactByID(rsp.Response.DeliverTx.Data)
 	assert.Nil(t, err)
 	assert.Equal(t, "myChecksum", a.Checksum)
 	assert.Equal(t, alice, a.Owner)
 	assert.Nil(t, err)
 
-	all, err := client.ListArtifact()
+	all, err := gClient.ListArtifact()
 	assert.Nil(t, err)
 
 	if len(all) == 0 {
@@ -143,14 +118,33 @@ func TestEndToEndScenario(t *testing.T) {
 	hookClient := testsupport.NewAdmissionClient(t, certDir, hookAddress, admissionPath)
 	content := podJson("foo/bar:v0.0.1")
 	data := hookClient.Query(content)
-	// then
 	assert.Equal(t, true, data.Response.Allowed)
 	assert.Equal(t, 200, data.Response.Status.Code)
+
 	// and with an unknown image
 	data = hookClient.Query(podJson("any/unknown:image"))
-	// then
 	assert.Equal(t, false, data.Response.Allowed)
 	assert.Equal(t, 404, data.Response.Status.Code)
+}
+
+func awaitTendermitUp(t *testing.T, tmConf *config.Config, err error, node *node.Node) {
+	t.Helper()
+	// wait for tendermit up
+	testsupport.WaitForGRPC(t, tmConf)
+	testsupport.WaitForRPC(t, tmConf)
+	t.Log("Endpoints are up")
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	_, err = weaveclient.NewLocalClient(node).WaitForNextBlock(ctx)
+	assert.Nil(t, err)
+}
+
+func localServerAddress(t *testing.T) string {
+	t.Helper()
+	hookPort, err := cmn.GetFreePort()
+	assert.Nil(t, err)
+	hookAddress := fmt.Sprintf("127.0.0.1:%d", hookPort)
+	return hookAddress
 }
 
 func initGenesis(t *testing.T, filename string, alice weave.Address) {

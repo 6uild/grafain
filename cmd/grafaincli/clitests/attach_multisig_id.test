@@ -1,0 +1,8 @@
+#!/bin/sh
+
+set -e
+
+grafaincli multisig -activation 4 -admin 8 \
+	| grafaincli with-multisig 1 2 \
+	| grafaincli with-multisig 3 \
+	| grafaincli view

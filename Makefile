@@ -16,7 +16,9 @@ WEAVEDIR=$(shell go list -m -f '{{.Dir}}' github.com/iov-one/weave)
 
 all:  dist
 
-dist: clean lint test build image
+dist: clean lint
+	cd cmd/grafaind && $(MAKE) dist
+	cd cmd/grafaincli && $(MAKE) dist
 
 clean:
 	rm -f ${BUILDOUT}
@@ -27,7 +29,7 @@ build:
 	        -asmflags=all=-trimpath=${DIST_SRC} \
 	        -mod=readonly -tags "netgo" \
 	        -ldflags="${LDFLAGS}" \
-	        -o $(BUILDOUT) ./cmd/grafain
+	        -o $(BUILDOUT) ./cmd/grafaind
 
 image:
 	docker build --pull -t $(IMAGE_NAME) .
