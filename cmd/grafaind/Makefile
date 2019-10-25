@@ -1,10 +1,11 @@
 .PHONY: all build test image tf protoc clean dist archive
 
-BUILD_VERSION ?= manual
+BUILD_HASH ?= manual
+BUILD_VERSION ?=$(shell git describe --tags --abbrev=9 | sed 's/^v//')
 DIST_SRC=$(pwd)/$(go list -m)
-LDFLAGS=-extldflags=-static -X main.version=${BUILD_VERSION} -s -w
+LDFLAGS=-extldflags=-static -X main.version=${BUILD_HASH} -s -w
 BUILDOUT ?= grafaind
-IMAGE_NAME = "alpetest/grafain:${BUILD_VERSION}"
+IMAGE_NAME = "alpetest/grafain:${BUILD_HASH}"
 
 all: dist
 

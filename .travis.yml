@@ -26,10 +26,10 @@ go:
 env:
   global:
     - GO111MODULE="on"
-    - BUILD_VERSION=$(echo ${TRAVIS_COMMIT} | cut -c 1-10)
+    - BUILD_HASH=$(echo ${TRAVIS_COMMIT} | cut -c 1-10)
     - MAIN_GO_VERSION=1.13
     - GORACE="halt_on_error=1"
-    - VERSION=$(git describe --tags --abbrev=9 | sed 's/^v//')
+    - BUILD_VERSION=$(git describe --tags --abbrev=9 | sed 's/^v//')
 
 script:
   - make all;
@@ -39,14 +39,14 @@ script:
 
     if [[ $release_latest == "yes" ]]; then
     docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD";
-    docker tag  "alpetest/grafain:${BUILD_VERSION}" "alpetest/grafain:latest" ;
+    docker tag  "alpetest/grafain:${BUILD_HASH}" "alpetest/grafain:latest" ;
     docker push "alpetest/grafain:latest";
     docker logout;
     fi;
 
     if [[ $release_tag == "yes" ]]; then
     docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD";
-    docker tag  "alpetest/grafain:${BUILD_VERSION}" "alpetest/grafain:$TRAVIS_TAG" ;
+    docker tag  "alpetest/grafain:${BUILD_HASH}" "alpetest/grafain:$TRAVIS_TAG" ;
     docker push "alpetest/grafain:$TRAVIS_TAG";
     docker logout;
     fi;
@@ -68,10 +68,10 @@ deploy:
   api_key:
     ${GITHUB_API_KEY}
   file:
-    - ${TRAVIS_BUILD_DIR}/cmd/grafaind/grafaind-${VERSION}-linux-amd64.tar.gz
-    - ${TRAVIS_BUILD_DIR}/cmd/grafaind/grafaind-${VERSION}-linux-amd64.sha256
-    - ${TRAVIS_BUILD_DIR}/cmd/grafaincli/grafaincli-${VERSION}-linux-amd64.tar.gz
-    - ${TRAVIS_BUILD_DIR}/cmd/grafaincli/grafaincli-${VERSION}-linux-amd64.sha256
+    - ${TRAVIS_BUILD_DIR}/cmd/grafaind/grafaind-${BUILD_VERSION}-linux-amd64.tar.gz
+    - ${TRAVIS_BUILD_DIR}/cmd/grafaind/grafaind-${BUILD_VERSION}-linux-amd64.sha256
+    - ${TRAVIS_BUILD_DIR}/cmd/grafaincli/grafaincli-${BUILD_VERSION}-linux-amd64.tar.gz
+    - ${TRAVIS_BUILD_DIR}/cmd/grafaincli/grafaincli-${BUILD_VERSION}-linux-amd64.sha256
   skip_cleanup: true
   on:
     tags: true
