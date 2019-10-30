@@ -1,5 +1,5 @@
 {
-  "CN": "grafain.default.svc",
+  "CN": "",
   "key": {
     "algo": "rsa",
     "size": 2048

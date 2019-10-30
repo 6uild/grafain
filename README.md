@@ -25,7 +25,8 @@ for Kubernetes are not. What you can expect to work:
 ### Quickstart with [Minikube](https://kubernetes.io/docs/tasks/tools/install-minikube/)
 ```sh
 minikube start                  # start environment
-kubectl apply -f contrib/k8s    # deploy grafain components
+cd contrib/k8s                  
+./seed-cluster.sh               # deploy grafain components
 kubectl get pods                # check grafain pod is running
 kubeclt logs -f grafain-0       # watch log
 

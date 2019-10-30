@@ -122,9 +122,36 @@ spec:
               cpu: 100m
               memory: 100Mi
       containers:
+        - name: grafain
+          imagePullPolicy: Always
+          image: alpetest/grafain:manual
+          args:
+            - -home=/data/grafain
+            - -hook-certs=/certs
+            - -hook-address=0.0.0.0:8443
+            - start
+            - -bind=unix:///socks/app.sock
+          ports:
+            - containerPort: 8443
+              name: hook
+          volumeMounts:
+            - name: socksdir
+              mountPath: /socks
+            - name: tmdir
+              mountPath: /data/grafain
+              subPath: grafain
+            - name: tls-certs
+              mountPath: /certs
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 250m
+              memory: 256Mi
         - name: tendermint
           imagePullPolicy: Always
-          image: iov1/tendermint:v0.31.10-iov1
+          image: iov1/tendermint:v0.31.11-iov1
           ports:
             - containerPort: 26656
               name: p2p
@@ -180,7 +207,7 @@ spec:
                 - 'curl -s --fail http://localhost:26657/status | jq --exit-status ".result.sync_info.catching_up==false"'
             failureThreshold: 999999
             periodSeconds: 20
-            initialDelaySeconds: 40
+            initialDelaySeconds: 10
           livenessProbe:
             exec:
               command:
@@ -190,37 +217,10 @@ spec:
                 - -ec
                 - 'curl -s --fail http://localhost:26657/abci_info | jq --exit-status ".result.response"'
             failureThreshold: 3
-            initialDelaySeconds: 40
+            initialDelaySeconds: 10
             periodSeconds: 5
             successThreshold: 1
             timeoutSeconds: 2
-        - name: grafain
-          imagePullPolicy: Always
-          image: alpetest/grafain:manual
-          args:
-            - -home=/data/grafain
-            - -hook-certs=/certs
-            - -hook-address=0.0.0.0:8443
-            - start
-            - -bind=unix:///socks/app.sock
-          ports:
-            - containerPort: 8443
-              name: hook
-          volumeMounts:
-            - name: socksdir
-              mountPath: /socks
-            - name: tmdir
-              mountPath: /data/grafain
-              subPath: grafain
-            - name: tls-certs
-              mountPath: /certs
-          resources:
-            limits:
-              cpu: 500m
-              memory: 512Mi
-            requests:
-              cpu: 250m
-              memory: 256Mi
       volumes:
         - name: grafain-genesis
           configMap:
