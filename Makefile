@@ -13,6 +13,7 @@ all:  dist
 dist: clean lint test
 	cd cmd/grafaind && $(MAKE) dist
 	cd cmd/grafaincli && $(MAKE) dist
+	cd cmd/dashboard && $(MAKE) dist
 
 clean:
 	rm -f ${BUILDOUT}
