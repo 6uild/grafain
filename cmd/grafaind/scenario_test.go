@@ -131,6 +131,11 @@ func TestEndToEndScenario(t *testing.T) {
 	data := hookClient.Query(content)
 	assert.Equal(t, true, data.Response.Allowed)
 	assert.Equal(t, 200, data.Response.Status.Code)
+	// and a genesis image
+	content = podJson("alpetest/grafain:vx.y.z")
+	data = hookClient.Query(content)
+	assert.Equal(t, true, data.Response.Allowed)
+	assert.Equal(t, 200, data.Response.Status.Code)
 
 	// and with an unknown image
 	data = hookClient.Query(podJson("any/unknown:image"))
@@ -172,6 +177,13 @@ func initGenesis(t *testing.T, filename string, alice weave.Address) {
 			},
 			"cash": cash.Configuration{
 				CollectorAddress: alice,
+			},
+		},
+		"artifacts": []dict{
+			dict{
+				"image":    "alpetest/grafain:vx.y.z",
+				"owner":    alice,
+				"checksum": "anyValidChecksum",
 			},
 		},
 		"initialize_schema": []dict{
