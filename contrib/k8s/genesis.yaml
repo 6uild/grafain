@@ -25,6 +25,18 @@ data:
       "validators": [],
       "app_hash": "",
       "app_state": {
+        "artifacts": [
+          {
+          "image":    "alpetest/grafain:manual",
+          "owner":    "0E95C039EF14EE329D0E09D84F909CF9EB5EF472",
+          "checksum": "anyValidChecksum"
+          },
+          {
+           "image":    "alpetest/grafain:latest",
+           "owner":    "0E95C039EF14EE329D0E09D84F909CF9EB5EF472",
+           "checksum": "anyValidChecksum"
+          }
+        ],
         "cash": [
         {
           "address": "0E95C039EF14EE329D0E09D84F909CF9EB5EF472",
@@ -40,7 +52,7 @@ data:
         "currencies": [
         {
           "ticker": "GRFN",
-          "name": "Grafain utility token"
+          "name": "Unused Grafain utility token"
         }
         ],
         "multisig": [
