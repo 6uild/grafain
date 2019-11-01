@@ -78,15 +78,28 @@ func TestEndToEndScenario(t *testing.T) {
 	certDir := filepath.Join(filepath.Dir(filename), "../../contrib/pki")
 	admissionPath := "/testing"
 	hookAddress := localServerAddress(t)
+
+	abort := make(chan error, 1)
 	go func() { //
 		logger := node.Logger.With("module", "admission-hook")
 		logger = log.NewFilter(logger, log.AllowDebug())
-		mgr := testsupport.LocalManager(t)
-		assert.Nil(t, webhook.Start(mgr, hookAddress, certDir, admissionPath, storage, logger))
-
+		mgr, err := testsupport.LocalManager()
+		if err != nil {
+			abort <- err
+			return
+		}
+		err = webhook.Start(mgr, hookAddress, certDir, admissionPath, storage, logger)
+		if err != nil {
+			abort <- err
+		}
 	}()
 
 	awaitTendermitUp(t, tmConf, err, node)
+	select {
+	case err := <-abort:
+		t.Fatalf("unexpected error: %+v", err)
+	default: // when hook is up by now then it must be good
+	}
 
 	// now start testing grafain via abci operations
 	gClient := client.NewClient(rpcclient.NewLocal(node))

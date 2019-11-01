@@ -1,9 +1,6 @@
 package testsupport
 
 import (
-	"testing"
-
-	"github.com/iov-one/weave/weavetest/assert"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -13,13 +10,16 @@ import (
 	k8runtime "sigs.k8s.io/controller-runtime/pkg/runtime/scheme"
 )
 
-func LocalManager(t *testing.T) manager.Manager {
-	t.Helper()
+func LocalManager() (manager.Manager, error) {
 	cfg, err := config.GetConfig()
-	assert.Nil(t, err)
+	if err != nil {
+		return nil, err
+	}
 	gv := schema.GroupVersion{Group: "", Version: "v1"}
 	s, err := (&k8runtime.Builder{GroupVersion: gv}).Register(&corev1.Pod{}, &corev1.PodList{}).Build()
-	assert.Nil(t, err)
+	if err != nil {
+		return nil, err
+	}
 	opts := manager.Options{
 		Scheme: s,
 		MapperProvider: func(c *rest.Config) (meta.RESTMapper, error) {
@@ -27,8 +27,7 @@ func LocalManager(t *testing.T) manager.Manager {
 		},
 	}
 	mgr, err := manager.New(cfg, opts)
-	assert.Nil(t, err)
-	return mgr
+	return mgr, err
 }
 
 type FakeMapper struct {
