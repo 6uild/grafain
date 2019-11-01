@@ -5,7 +5,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/iov-one/weave/app"
+	"github.com/alpe/grafain/pkg/client"
+	weaveclient "github.com/iov-one/weave/client"
 	"github.com/iov-one/weave/errors"
 	"github.com/tendermint/tendermint/libs/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -14,13 +15,13 @@ import (
 )
 
 // Start webhook server and block.
-func Start(mgr manager.Manager, serverAddress string, certDir, admissionPath string, store <-chan *app.StoreApp, logger log.Logger) error {
+func Start(mgr manager.Manager, rpcAddress, hookServerAddress string, certDir, admissionPath string, logger log.Logger) error {
 	logger.Info("Setting up webhook server")
 	hookServer := mgr.GetWebhookServer()
 	hookServer.CertDir = certDir
-	parts := strings.Split(serverAddress, ":")
+	parts := strings.Split(hookServerAddress, ":")
 	if len(parts) != 2 {
-		return errors.Wrapf(errors.ErrInput, "Invalid address :%q", serverAddress)
+		return errors.Wrapf(errors.ErrInput, "Invalid address :%q", hookServerAddress)
 	}
 	var err error
 	hookServer.Host = parts[0]
@@ -29,10 +30,12 @@ func Start(mgr manager.Manager, serverAddress string, certDir, admissionPath str
 		return errors.Wrapf(errors.ErrInput, "Invalid port :%q", parts[1])
 	}
 
+	grafainClient := client.NewClient(weaveclient.NewHTTPConnection(rpcAddress))
+
 	logger.Info("Registering webhooks to the internal webhook server")
 	hookServer.Register(admissionPath, &webhook.Admission{
 		Handler: NewPodValidator(
-			<-store,
+			grafainClient,
 			logger.With("module", "pod-validator"),
 		),
 	})
@@ -41,7 +44,7 @@ func Start(mgr manager.Manager, serverAddress string, certDir, admissionPath str
 		w.Write([]byte("Admission hook: " + admissionPath))
 	}))
 
-	logger.Info("Starting manager", "address", serverAddress)
+	logger.Info("Starting manager", "address", hookServerAddress)
 	if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
 		return errors.Wrap(err, "Unable to run manager")
 	}

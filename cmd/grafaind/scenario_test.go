@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/alpe/grafain/cmd/grafaind/testsupport"
+	grafain "github.com/alpe/grafain/pkg/app"
 	"github.com/alpe/grafain/pkg/client"
 	"github.com/alpe/grafain/pkg/webhook"
 	"github.com/iov-one/weave"
@@ -34,8 +35,6 @@ const TendermintLocalAddr = "localhost:26657"
 var (
 	tendermintAddress = flag.String("address", TendermintLocalAddr, "destination address of tendermint rpc")
 	hexSeed           = flag.String("seed", "d34c1970ae90acf3405f2d99dcaca16d0c7db379f4beafcfdf667b9d69ce350d27f5fb440509dfa79ec883a0510bc9a9614c3d44188881f0c5e402898b4bf3c9", "private key seed in hex")
-	delay             = flag.Duration("delay", 10*time.Millisecond, "duration to wait between test cases for rate limits")
-	derivationPath    = flag.String("derivation", "", "bip44 derivation path: \"m/44'/234'/0'\"")
 )
 
 func parsePrivateKey(t *testing.T) *crypto.PrivateKey {
@@ -61,8 +60,7 @@ func TestEndToEndScenario(t *testing.T) {
 	tmConf.Moniker = "ScenarioTest"
 	initGenesis(t, tmConf.GenesisFile(), alice)
 
-	appGenFactory, storage := appWithStorage()
-	abciApp, err := appGenFactory(&server.Options{
+	abciApp, err := grafain.GenerateApp(&server.Options{
 		Home:   tmConf.RootDir,
 		Logger: logger,
 		Debug:  true,
@@ -78,15 +76,28 @@ func TestEndToEndScenario(t *testing.T) {
 	certDir := filepath.Join(filepath.Dir(filename), "../../contrib/pki")
 	admissionPath := "/testing"
 	hookAddress := localServerAddress(t)
+
+	abort := make(chan error, 1)
 	go func() { //
 		logger := node.Logger.With("module", "admission-hook")
 		logger = log.NewFilter(logger, log.AllowDebug())
-		mgr := testsupport.LocalManager(t)
-		assert.Nil(t, webhook.Start(mgr, hookAddress, certDir, admissionPath, storage, logger))
-
+		mgr, err := testsupport.LocalManager()
+		if err != nil {
+			abort <- err
+			return
+		}
+		err = webhook.Start(mgr, tmConf.RPC.ListenAddress, hookAddress, certDir, admissionPath, logger)
+		if err != nil {
+			abort <- err
+		}
 	}()
 
 	awaitTendermitUp(t, tmConf, err, node)
+	select {
+	case err := <-abort:
+		t.Fatalf("unexpected error: %+v", err)
+	default: // when hook is up by now then it must be good
+	}
 
 	// now start testing grafain via abci operations
 	gClient := client.NewClient(rpcclient.NewLocal(node))
@@ -133,7 +144,7 @@ func awaitTendermitUp(t *testing.T, tmConf *config.Config, err error, node *node
 	testsupport.WaitForGRPC(t, tmConf)
 	testsupport.WaitForRPC(t, tmConf)
 	t.Log("Endpoints are up")
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	_, err = weaveclient.NewLocalClient(node).WaitForNextBlock(ctx)
 	assert.Nil(t, err)
