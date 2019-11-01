@@ -1,15 +1,14 @@
 .PHONY: all build test image tf protoc clean dist archive
 
-BUILD_HASH ?= manual
-BUILD_VERSION ?=$(shell git describe --tags --abbrev=9 | sed 's/^v//')
+BUILD_VERSION ?= manual
 DIST_SRC=$(pwd)/$(go list -m)
-LDFLAGS=-extldflags=-static -X main.BUILD_VERSION=${BUILD_HASH} -s -w
+LDFLAGS=-extldflags=-static -X main.version=${BUILD_VERSION} -s -w
 BUILDOUT ?= grafaincli
-IMAGE_NAME = "alpetest/grafaincli:${BUILD_HASH}"
+IMAGE_NAME = "alpetest/grafaincli:${BUILD_VERSION}"
 
 all: dist
 
-dist: clean build image archive
+dist: clean test build image archive
 
 clean:
 	rm -f ${BUILDOUT}
@@ -20,7 +19,7 @@ build:
 	        -asmflags=all=-trimpath=${DIST_SRC} \
 	        -mod=readonly -tags "netgo" \
 	        -ldflags="${LDFLAGS}" \
-	        -o ${BUILDOUT} .
+	        -o $(BUILDOUT) .
 
 archive:
 	tar -czvf ${BUILDOUT}-linux_amd64-${BUILD_VERSION}.tar.gz ${BUILDOUT}
@@ -29,6 +28,9 @@ archive:
 
 image:
 	docker build --pull -t $(IMAGE_NAME) .
+
+test:
+	go test -mod=readonly -race ./...
 
 install:
 	go install $(BUILD_FLAGS) .

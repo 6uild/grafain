@@ -7,6 +7,7 @@ cfssl gencert \
   -ca=ca.pem \
   -ca-key=ca-key.pem \
   -config=ca-config.json \
+  -hostname=grafain.default.svc \
   -profile=default \
   local-csr.json | cfssljson -bare local
 
@@ -18,7 +19,7 @@ cfssl gencert \
   -ca=ca.pem \
   -ca-key=ca-key.pem \
   -config=ca-config.json \
-  -hostname=grafain-hook.default.svc \
+  -hostname=grafain.default.svc \
   -profile=default \
   grafain-csr.json | cfssljson -bare grafain
 
