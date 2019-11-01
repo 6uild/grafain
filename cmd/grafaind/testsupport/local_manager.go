@@ -15,7 +15,8 @@ import (
 
 func LocalManager(t *testing.T) manager.Manager {
 	t.Helper()
-	cfg := config.GetConfigOrDie()
+	cfg, err := config.GetConfig()
+	assert.Nil(t, err)
 	gv := schema.GroupVersion{Group: "", Version: "v1"}
 	s, err := (&k8runtime.Builder{GroupVersion: gv}).Register(&corev1.Pod{}, &corev1.PodList{}).Build()
 	assert.Nil(t, err)
