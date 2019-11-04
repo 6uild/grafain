@@ -4,6 +4,7 @@ import (
 	"context"
 	"path/filepath"
 
+	"github.com/alpe/grafain/pkg/artifact"
 	"github.com/iov-one/weave"
 	"github.com/iov-one/weave/app"
 	"github.com/iov-one/weave/coin"
@@ -49,6 +50,7 @@ func DecorateApp(application app.BaseApp, logger log.Logger) app.BaseApp {
 		&msgfee.Initializer{},
 		&escrow.Initializer{Minter: cash.NewController(cash.NewBucket())},
 		&gov.Initializer{},
+		&artifact.Initializer{},
 	))
 	application.WithLogger(logger)
 	return application
