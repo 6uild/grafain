@@ -24,7 +24,7 @@ func LocalManager() (manager.Manager, error) {
 			return FakeMapper{}, nil
 		},
 	}
-	cfg := &rest.Config{Host:"example.com:80"}
+	cfg := &rest.Config{Host: "example.com:80"}
 	mgr, err := manager.New(cfg, opts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to setup manager: %+v", err)

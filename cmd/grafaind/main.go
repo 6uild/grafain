@@ -8,10 +8,7 @@ import (
 
 	grafain "github.com/alpe/grafain/pkg/app"
 	"github.com/alpe/grafain/pkg/webhook"
-	"github.com/iov-one/weave/app"
 	"github.com/iov-one/weave/commands/server"
-	"github.com/iov-one/weave/errors"
-	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/log"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -43,6 +40,7 @@ func main() {
 		certDir       = flag.String("hook-certs", "/certs", "TLS certrificates")
 		hookAddress   = flag.String("hook-address", ":8443", "Webhook server address with host and port. default: 0.0.0.0:8443")
 		admissionPath = flag.String("hook-path", "/validate-v1-pod", "Url path for admission hook. default: /validate-v1-pod")
+		tmRPCAddress  = flag.String("rpc-address", "http://127.0.0.1:26657", "Tendermint node address.")
 	)
 	flag.CommandLine.Usage = helpMessage
 
@@ -64,9 +62,8 @@ func main() {
 	case "help":
 		helpMessage()
 	case "start":
-		appGenFactory, storage := appWithStorage()
-		go startWebHook(*hookAddress, *certDir, *admissionPath, storage, logger.With("module", "admission-hook"))
-		err = server.StartCmd(appGenFactory, logger, *varHome, rest)
+		go startWebHook(*tmRPCAddress, *hookAddress, *certDir, *admissionPath, logger.With("module", "admission-hook"))
+		err = server.StartCmd(grafain.GenerateApp, logger, *varHome, rest)
 	case "getblock":
 		err = server.GetBlockCmd(rest)
 	case "retry":
@@ -84,32 +81,14 @@ func main() {
 	}
 }
 
-// The abci server is started with an application factory method.
-// within this method the storage is initialized. This function wraps
-// the factory method and sends the storage object to the returned channel to
-// allow its usage outside of the abci server context.
-func appWithStorage() (func(options *server.Options) (abci.Application, error), chan *app.StoreApp) {
-	c := make(chan *app.StoreApp, 1)
-	appGenHack := func(options *server.Options) (abci.Application, error) {
-		gApp, err := grafain.GenerateApp(options)
-		if err != nil {
-			return gApp, errors.Wrap(err, "failed to init grafain app")
-		}
-		c <- gApp.(app.BaseApp).StoreApp
-		close(c)
-		return gApp, err
-	}
-	return appGenHack, c
-}
-
-func startWebHook(serverAddress string, certDir, admissionPath string, store <-chan *app.StoreApp, logger log.Logger) {
+func startWebHook(tmRPCAddress, hookServerAddress string, certDir, admissionPath string, logger log.Logger) {
 	logger.Debug("Setting up manager")
 	mgr, err := manager.New(config.GetConfigOrDie(), manager.Options{})
 	if err != nil {
 		logger.Error("Unable to set up overall controller manager", "cause", err)
 		os.Exit(1)
 	}
-	err = webhook.Start(mgr, serverAddress, certDir, admissionPath, store, logger)
+	err = webhook.Start(mgr, tmRPCAddress, hookServerAddress, certDir, admissionPath, logger)
 	if err != nil {
 		logger.Error("Failed to start webhook server", "cause", err)
 		os.Exit(1)

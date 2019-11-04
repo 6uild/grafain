@@ -5,9 +5,8 @@ import (
 	"net/http"
 
 	"github.com/alpe/grafain/pkg/artifact"
-	"github.com/iov-one/weave/app"
+	grafain "github.com/alpe/grafain/pkg/client"
 	"github.com/iov-one/weave/errors"
-	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/log"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -19,19 +18,19 @@ var _ inject.Client = &podValidator{}
 var _ admission.DecoderInjector = &podValidator{}
 
 type queryStore interface {
-	Query(abci.RequestQuery) abci.ResponseQuery
+	AbciQuery(path string, data []byte) (grafain.AbciResponse, error)
 }
 type podValidator struct {
 	logger  log.Logger
 	client  client.Client
 	decoder *admission.Decoder
-	store   queryStore
+	source  queryStore
 }
 
-func NewPodValidator(store queryStore, logger log.Logger) *podValidator {
+func NewPodValidator(source queryStore, logger log.Logger) *podValidator {
 	return &podValidator{
 		logger: logger,
-		store:  store,
+		source: source,
 	}
 }
 
@@ -76,26 +75,19 @@ const queryPath = "/artifacts/image"
 func (v *podValidator) doWithContainers(containers []corev1.Container) error {
 	for _, c := range containers {
 		v.logger.Info("inspecting container", "image", c.Image, "name", c.Name)
-		resp := v.store.Query(abci.RequestQuery{
-			Path: queryPath,
-			Data: []byte(c.Image),
-		})
+		resp, err := v.source.AbciQuery(queryPath, []byte(c.Image))
+		if err != nil {
+			return errors.Wrap(err, "failed to query backend")
+		}
 		v.logger.Debug("query response", "resp", resp)
-		if resp.Code != 0 {
-			return errors.Wrap(errors.ErrDatabase, resp.Log)
-		}
-		var vals app.ResultSet
-		if err := vals.Unmarshal(resp.Value); err != nil {
-			return errors.Wrap(err, "failed to unmarshal client response")
-		}
-		if len(vals.Results) == 0 {
+		if len(resp.Models) == 0 {
 			return errors.ErrNotFound
 		}
 
-		artfs := make([]artifact.Artifact, len(vals.Results))
-		for i, v := range vals.Results {
+		artfs := make([]artifact.Artifact, len(resp.Models))
+		for i, v := range resp.Models {
 			var artf artifact.Artifact
-			if err := artf.Unmarshal(v); err != nil {
+			if err := artf.Unmarshal(v.Value); err != nil {
 				return errors.Wrapf(err, "failed to unmarshal client response")
 			}
 			artfs[i] = artf

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/alpe/grafain/cmd/grafaind/testsupport"
+	grafain "github.com/alpe/grafain/pkg/app"
 	"github.com/alpe/grafain/pkg/client"
 	"github.com/alpe/grafain/pkg/webhook"
 	"github.com/iov-one/weave"
@@ -34,8 +35,6 @@ const TendermintLocalAddr = "localhost:26657"
 var (
 	tendermintAddress = flag.String("address", TendermintLocalAddr, "destination address of tendermint rpc")
 	hexSeed           = flag.String("seed", "d34c1970ae90acf3405f2d99dcaca16d0c7db379f4beafcfdf667b9d69ce350d27f5fb440509dfa79ec883a0510bc9a9614c3d44188881f0c5e402898b4bf3c9", "private key seed in hex")
-	delay             = flag.Duration("delay", 10*time.Millisecond, "duration to wait between test cases for rate limits")
-	derivationPath    = flag.String("derivation", "", "bip44 derivation path: \"m/44'/234'/0'\"")
 )
 
 func parsePrivateKey(t *testing.T) *crypto.PrivateKey {
@@ -61,8 +60,7 @@ func TestEndToEndScenario(t *testing.T) {
 	tmConf.Moniker = "ScenarioTest"
 	initGenesis(t, tmConf.GenesisFile(), alice)
 
-	appGenFactory, storage := appWithStorage()
-	abciApp, err := appGenFactory(&server.Options{
+	abciApp, err := grafain.GenerateApp(&server.Options{
 		Home:   tmConf.RootDir,
 		Logger: logger,
 		Debug:  true,
@@ -88,7 +86,7 @@ func TestEndToEndScenario(t *testing.T) {
 			abort <- err
 			return
 		}
-		err = webhook.Start(mgr, hookAddress, certDir, admissionPath, storage, logger)
+		err = webhook.Start(mgr, tmConf.RPC.ListenAddress, hookAddress, certDir, admissionPath, logger)
 		if err != nil {
 			abort <- err
 		}
