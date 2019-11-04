@@ -3,7 +3,7 @@ FROM scratch
 COPY index.html /
 COPY css/ /
 COPY images/ /
-COPY dashboard /
+COPY grafainboard /
 
-ENTRYPOINT ["/dashboard"]
+ENTRYPOINT ["/grafainboard"]
 CMD [""]

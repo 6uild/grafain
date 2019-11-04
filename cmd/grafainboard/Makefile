@@ -4,7 +4,7 @@ BUILD_HASH ?= manual
 BUILD_VERSION ?=$(shell git describe --tags --abbrev=9 | sed 's/^v//')
 DIST_SRC=$(shell pwd)
 LDFLAGS=-extldflags=-static -X main.version=${BUILD_HASH} -s -w
-BUILDOUT ?= dashboard
+BUILDOUT ?= grafainboard
 IMAGE_NAME = "alpetest/grafainboard:${BUILD_HASH}"
 
 all: dist
@@ -23,9 +23,9 @@ build:
 	        -o ${BUILDOUT} .
 
 archive:
-	tar -czvf ${BUILDOUT}-linux_amd64-${BUILD_VERSION}.tar.gz ${BUILDOUT}
-	rm -f ${BUILDOUT}-linux_amd64-${BUILD_VERSION}.sha256
-	sha256sum ${BUILDOUT}-linux_amd64-${BUILD_VERSION}.tar.gz | awk '{print $$1}' > ${BUILDOUT}-linux_amd64-${BUILD_VERSION}.sha256
+	tar -czvf ${BUILDOUT}-${BUILD_VERSION}-linux-amd64.tar.gz ${BUILDOUT}
+	rm -f ${BUILDOUT}-${BUILD_VERSION}-linux-amd64.sha256
+	sha256sum ${BUILDOUT}-${BUILD_VERSION}-linux-amd64.tar.gz | awk '{print $$1}' > ${BUILDOUT}-${BUILD_VERSION}-linux-amd64.sha256
 
 image:
 	docker build --pull -t $(IMAGE_NAME) .
