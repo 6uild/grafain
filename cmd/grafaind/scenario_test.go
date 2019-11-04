@@ -144,7 +144,7 @@ func awaitTendermitUp(t *testing.T, tmConf *config.Config, err error, node *node
 	testsupport.WaitForGRPC(t, tmConf)
 	testsupport.WaitForRPC(t, tmConf)
 	t.Log("Endpoints are up")
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	_, err = weaveclient.NewLocalClient(node).WaitForNextBlock(ctx)
 	assert.Nil(t, err)
