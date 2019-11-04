@@ -2,10 +2,10 @@
 
 BUILD_HASH ?= manual
 BUILD_VERSION ?=$(shell git describe --tags --abbrev=9 | sed 's/^v//')
-DIST_SRC=$(shell pwd)/$(shell go list -m)
+DIST_SRC=$(shell pwd)
 LDFLAGS=-extldflags=-static -X main.version=${BUILD_HASH} -s -w
-BUILDOUT ?= grafaind
-IMAGE_NAME = "alpetest/grafain:${BUILD_HASH}"
+BUILDOUT ?= dashboard
+IMAGE_NAME = "alpetest/grafainboard:${BUILD_HASH}"
 
 all: dist
 

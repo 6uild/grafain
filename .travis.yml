@@ -41,6 +41,10 @@ script:
     docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD";
     docker tag  "alpetest/grafain:${BUILD_HASH}" "alpetest/grafain:latest" ;
     docker push "alpetest/grafain:latest";
+    docker tag  "alpetest/grafaincli:${BUILD_HASH}" "alpetest/grafaincli:latest" ;
+    docker push "alpetest/grafaincli:latest";
+    docker tag  "alpetest/grafainboard:${BUILD_HASH}" "alpetest/grafainboard:latest" ;
+    docker push "alpetest/grafainboard:latest";
     docker logout;
     fi;
 
@@ -48,6 +52,10 @@ script:
     docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD";
     docker tag  "alpetest/grafain:${BUILD_HASH}" "alpetest/grafain:$TRAVIS_TAG" ;
     docker push "alpetest/grafain:$TRAVIS_TAG";
+    docker tag  "alpetest/grafaincli:${BUILD_HASH}" "alpetest/grafaincli:$TRAVIS_TAG" ;
+    docker push "alpetest/grafaincli:$TRAVIS_TAG";
+    docker tag  "alpetest/grafainboard:${BUILD_HASH}" "alpetest/grafainboard:$TRAVIS_TAG" ;
+    docker push "alpetest/grafainboard:$TRAVIS_TAG";
     docker logout;
     fi;
     fi;
@@ -72,6 +80,8 @@ deploy:
     - ${TRAVIS_BUILD_DIR}/cmd/grafaind/grafaind-${BUILD_VERSION}-linux-amd64.sha256
     - ${TRAVIS_BUILD_DIR}/cmd/grafaincli/grafaincli-${BUILD_VERSION}-linux-amd64.tar.gz
     - ${TRAVIS_BUILD_DIR}/cmd/grafaincli/grafaincli-${BUILD_VERSION}-linux-amd64.sha256
+    - ${TRAVIS_BUILD_DIR}/cmd/grafaincli/grafainboard-${BUILD_VERSION}-linux-amd64.tar.gz
+    - ${TRAVIS_BUILD_DIR}/cmd/grafaincli/grafainboard-${BUILD_VERSION}-linux-amd64.sha256
   skip_cleanup: true
   on:
     tags: true

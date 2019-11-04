@@ -2,7 +2,7 @@
 
 BUILD_HASH ?= manual
 BUILD_VERSION ?=$(shell git describe --tags --abbrev=9 | sed 's/^v//')
-DIST_SRC=$(pwd)/$(go list -m)
+DIST_SRC=$(shell pwd)
 LDFLAGS=-extldflags=-static -X main.BUILD_VERSION=${BUILD_HASH} -s -w
 BUILDOUT ?= grafaincli
 IMAGE_NAME = "alpetest/grafaincli:${BUILD_HASH}"

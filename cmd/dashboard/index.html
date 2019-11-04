@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard</title>
+    <meta name="description" content="grafain dashboard">
+    <meta name="author" content="grafain.net">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="//fonts.googleapis.com/css?family=Raleway:400,300,600" rel="stylesheet" type="text/css">
+    <link rel="stylesheet" href="css/normalize.css">
+    <link rel="stylesheet" href="css/skeleton.css">
+    <link rel="icon" type="image/png" href="images/favicon.png">
+
+</head>
+<body>
+<div class="container">
+{{if .Items}}
+    <table>
+        <thead>
+        <tr>
+            <th>#</th>
+            <th>Image</th>
+            <th>Checksum</th>
+            <th>Owner</th>
+        </tr>
+        </thead>
+        <tbody>
+        {{range .Items}}
+        <tr>
+            <td>{{ .Key }}</td>
+            <td>{{ .Value.Image }}</td>
+            <td>{{ .Value.Checksum }}</td>
+            <td>
+                <pre>{{ .Value.Owner }}</pre>
+            </td>
+        <tr>
+            {{end}}
+        </tbody>
+    </table>
+{{- else}}
+    <h2>No elements</h2>
+{{- end}}
+</div>
+
+</body>
+</html>
