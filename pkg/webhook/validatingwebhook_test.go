@@ -1,18 +1,16 @@
 package webhook
 
 import (
-	"context"
+	"fmt"
 	"os"
 	"testing"
 
-	grafain "github.com/alpe/grafain/pkg/app"
 	"github.com/alpe/grafain/pkg/artifact"
+	grafain "github.com/alpe/grafain/pkg/client"
 	"github.com/iov-one/weave"
-	"github.com/iov-one/weave/app"
-	"github.com/iov-one/weave/coin"
 	"github.com/iov-one/weave/errors"
 	"github.com/iov-one/weave/migration"
-	"github.com/iov-one/weave/store/iavl"
+	"github.com/iov-one/weave/store"
 	"github.com/iov-one/weave/weavetest"
 	"github.com/iov-one/weave/weavetest/assert"
 	"github.com/tendermint/tendermint/libs/log"
@@ -20,8 +18,7 @@ import (
 )
 
 func TestQueryWeave(t *testing.T) {
-	memoryStore := iavl.MockCommitStore()
-	db := memoryStore.CacheWrap()
+	db := store.MemStore()
 	migration.MustInitPkg(db, artifact.PackageName)
 
 	specs := map[string]struct {
@@ -50,8 +47,7 @@ func TestQueryWeave(t *testing.T) {
 				_, err := bucket.Put(db, nil, v)
 				assert.Nil(t, err)
 			}
-			assert.Nil(t, db.Write())
-			store := app.NewStoreApp("test-app", memoryStore, grafain.QueryRouter(coin.Coin{}), context.TODO())
+			store := newArtifactQueryAdapter(db)
 			v := NewPodValidator(store, log.NewTMLogger(log.NewSyncWriter(os.Stdout)))
 			// when
 			err := v.doWithContainers([]corev1.Container{
@@ -64,4 +60,24 @@ func TestQueryWeave(t *testing.T) {
 			assert.IsErr(t, spec.expError, err)
 		})
 	}
+}
+
+type artifactQueryAdapter struct {
+	db     weave.KVStore
+	router weave.QueryRouter
+}
+
+func newArtifactQueryAdapter(db weave.KVStore) *artifactQueryAdapter {
+	router := weave.NewQueryRouter()
+	artifact.NewBucket().Register("artifacts", router)
+	return &artifactQueryAdapter{db: db, router: router}
+}
+
+func (q artifactQueryAdapter) AbciQuery(path string, data []byte) (grafain.AbciResponse, error) {
+	handler := q.router.Handler(path)
+	if handler == nil {
+		return grafain.AbciResponse{}, fmt.Errorf("no handler for path %q", path)
+	}
+	m, err := handler.Query(q.db, weave.KeyQueryMod, data)
+	return grafain.AbciResponse{Models: m, Height: 1}, err
 }

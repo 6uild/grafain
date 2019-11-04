@@ -1,33 +1,35 @@
 package testsupport
 
 import (
-	"testing"
+	"fmt"
 
-	"github.com/iov-one/weave/weavetest/assert"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	k8runtime "sigs.k8s.io/controller-runtime/pkg/runtime/scheme"
 )
 
-func LocalManager(t *testing.T) manager.Manager {
-	t.Helper()
-	cfg := config.GetConfigOrDie()
+func LocalManager() (manager.Manager, error) {
+
 	gv := schema.GroupVersion{Group: "", Version: "v1"}
 	s, err := (&k8runtime.Builder{GroupVersion: gv}).Register(&corev1.Pod{}, &corev1.PodList{}).Build()
-	assert.Nil(t, err)
+	if err != nil {
+		return nil, err
+	}
 	opts := manager.Options{
 		Scheme: s,
 		MapperProvider: func(c *rest.Config) (meta.RESTMapper, error) {
 			return FakeMapper{}, nil
 		},
 	}
+	cfg := &rest.Config{Host: "example.com:80"}
 	mgr, err := manager.New(cfg, opts)
-	assert.Nil(t, err)
-	return mgr
+	if err != nil {
+		return nil, fmt.Errorf("failed to setup manager: %+v", err)
+	}
+	return mgr, nil
 }
 
 type FakeMapper struct {
