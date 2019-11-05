@@ -2,6 +2,8 @@ apiVersion: admissionregistration.k8s.io/v1beta1
 kind: ValidatingWebhookConfiguration
 metadata:
   name: grafain
+  labels:
+    app: grafain
 webhooks:
 - name: grafain-hook.default.svc
 #  failurePolicy: Ignore # for bootstrapping
