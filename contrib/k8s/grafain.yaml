@@ -2,6 +2,8 @@ apiVersion: v1
 kind: Service
 metadata:
   name: grafain-rpc
+  labels:
+    app: grafain
 spec:
   ports:
     - port: 26657
@@ -14,6 +16,8 @@ apiVersion: v1
 kind: Service
 metadata:
   name: grafain-hook
+  labels:
+    app: grafain
 spec:
   ports:
     - port: 443
@@ -27,6 +31,8 @@ apiVersion: v1
 kind: Service
 metadata:
   name: grafain-p2p
+  labels:
+    app: grafain
 spec:
   ports:
     - port: 26656
@@ -40,6 +46,8 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: grafain
+  labels:
+    app: grafain
 spec:
   serviceName: grafain
   replicas: 1

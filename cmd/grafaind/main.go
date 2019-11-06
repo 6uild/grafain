@@ -9,6 +9,7 @@ import (
 	grafain "github.com/alpe/grafain/pkg/app"
 	"github.com/alpe/grafain/pkg/webhook"
 	"github.com/iov-one/weave/commands/server"
+	"github.com/iov-one/weave/errors"
 	"github.com/tendermint/tendermint/libs/log"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -62,8 +63,14 @@ func main() {
 	case "help":
 		helpMessage()
 	case "start":
-		go startWebHook(*tmRPCAddress, *hookAddress, *certDir, *admissionPath, logger.With("module", "admission-hook"))
-		err = server.StartCmd(grafain.GenerateApp, logger, *varHome, rest)
+		awaitErr := make(chan error, 2)
+		go func() {
+			awaitErr <- startWebHook(*tmRPCAddress, *hookAddress, *certDir, *admissionPath, logger.With("module", "admission-hook"))
+		}()
+		go func() {
+			awaitErr <- server.StartCmd(grafain.GenerateApp, logger, *varHome, rest)
+		}()
+		err = <-awaitErr
 	case "getblock":
 		err = server.GetBlockCmd(rest)
 	case "retry":
@@ -72,25 +79,24 @@ func main() {
 		fmt.Println(version)
 	default:
 		err = fmt.Errorf("unknown command: %s", cmd)
+		helpMessage()
 	}
 
 	if err != nil {
 		fmt.Printf("Error: %+v\n\n", err)
-		helpMessage()
 		os.Exit(1)
 	}
 }
 
-func startWebHook(tmRPCAddress, hookServerAddress string, certDir, admissionPath string, logger log.Logger) {
+func startWebHook(tmRPCAddress, hookServerAddress string, certDir, admissionPath string, logger log.Logger) error {
 	logger.Debug("Setting up manager")
-	mgr, err := manager.New(config.GetConfigOrDie(), manager.Options{})
+	cfg, err := config.GetConfig()
 	if err != nil {
-		logger.Error("Unable to set up overall controller manager", "cause", err)
-		os.Exit(1)
+		return errors.Wrap(err, "Unable to load kubernetes config")
 	}
-	err = webhook.Start(mgr, tmRPCAddress, hookServerAddress, certDir, admissionPath, logger)
+	mgr, err := manager.New(cfg, manager.Options{})
 	if err != nil {
-		logger.Error("Failed to start webhook server", "cause", err)
-		os.Exit(1)
+		return errors.Wrap(err, "Unable to set up overall controller manager")
 	}
+	return webhook.Start(mgr, tmRPCAddress, hookServerAddress, certDir, admissionPath, logger)
 }
