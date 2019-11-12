@@ -1,4 +1,4 @@
-.PHONY: all build test image tf clean dist lint protolint protofmt protodocs protoc import-spec
+.PHONY: all build test image tf clean dist lint protolint protofmt protodocs protoc import-spec install
 
 # for dockerized prototool
 USER := $(shell id -u):$(shell id -g)
@@ -14,6 +14,9 @@ dist: clean lint test
 	cd cmd/grafaind && $(MAKE) dist
 	cd cmd/grafaincli && $(MAKE) dist
 	cd cmd/grafainboard && $(MAKE) dist
+
+install:
+	cd cmd/grafaincli && $(MAKE) install
 
 clean:
 	rm -f ${BUILDOUT}

@@ -3,8 +3,8 @@
 set -e
 
 grafaincli send-tokens \
-		-src "seq:test/grafaincli/1" \
-		-dst "seq:test/grafaincli/2" \
+		-src "seq:test/foo/1" \
+		-dst "seq:test/bar/2" \
 		-amount "4 IOV" \
 		-memo "grafaincli test" \
 	| grafaincli view
