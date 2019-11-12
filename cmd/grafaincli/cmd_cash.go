@@ -29,17 +29,21 @@ destination account.
 	)
 	fl.Parse(args)
 
-	tx := &grafain.Tx{
-		Sum: &grafain.Tx_CashSendMsg{
-			CashSendMsg: &cash.SendMsg{
-				Metadata:    &weave.Metadata{Schema: 1},
-				Source:      *srcFl,
-				Destination: *dstFl,
-				Amount:      amountFl,
-				Memo:        *memoFl,
-				Ref:         nil,
-			},
+	msg := grafain.Tx_CashSendMsg{
+		CashSendMsg: &cash.SendMsg{
+			Metadata:    &weave.Metadata{Schema: 1},
+			Source:      *srcFl,
+			Destination: *dstFl,
+			Amount:      amountFl,
+			Memo:        *memoFl,
+			Ref:         nil,
 		},
+	}
+	if err:= msg.CashSendMsg.Validate(); err!=nil{
+		flagDie("invalid args: %s", err)
+	}
+	tx := &grafain.Tx{
+		Sum: &msg,
 	}
 	_, err := writeTx(output, tx)
 	return err
