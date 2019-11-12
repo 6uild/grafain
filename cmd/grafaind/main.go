@@ -37,11 +37,12 @@ func helpMessage() {
 func main() {
 	defaultHome := filepath.Join(os.ExpandEnv("$HOME"), ".grafain")
 	var (
-		varHome       = flag.String("home", defaultHome, "directory to store files under")
-		certDir       = flag.String("hook-certs", "/certs", "TLS certrificates")
-		hookAddress   = flag.String("hook-address", ":8443", "Webhook server address with host and port. default: 0.0.0.0:8443")
-		admissionPath = flag.String("hook-path", "/validate-v1-pod", "Url path for admission hook. default: /validate-v1-pod")
-		tmRPCAddress  = flag.String("rpc-address", "http://127.0.0.1:26657", "Tendermint node address.")
+		varHome              = flag.String("home", defaultHome, "directory to store files under")
+		certDir              = flag.String("hook-certs", "/certs", "TLS certificates")
+		hookAddress          = flag.String("hook-address", ":8443", "Webhook server address with host and port. default: 0.0.0.0:8443")
+		admissionPath        = flag.String("hook-path", "/validate-v1-pod", "Url path for admission hook. default: /validate-v1-pod")
+		tmRPCAddress         = flag.String("rpc-address", "http://127.0.0.1:26657", "Tendermint node address.")
+		admissionHookEnabled = flag.Bool("admission-hook", true, "Admission hook enabled, default: true")
 	)
 	flag.CommandLine.Usage = helpMessage
 
@@ -64,9 +65,11 @@ func main() {
 		helpMessage()
 	case "start":
 		awaitErr := make(chan error, 2)
-		go func() {
-			awaitErr <- startWebHook(*tmRPCAddress, *hookAddress, *certDir, *admissionPath, logger.With("module", "admission-hook"))
-		}()
+		if *admissionHookEnabled {
+			go func() {
+				awaitErr <- startWebHook(*tmRPCAddress, *hookAddress, *certDir, *admissionPath, logger.With("module", "admission-hook"))
+			}()
+		}
 		go func() {
 			awaitErr <- server.StartCmd(grafain.GenerateApp, logger, *varHome, rest)
 		}()
