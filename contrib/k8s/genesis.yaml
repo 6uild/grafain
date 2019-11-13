@@ -59,7 +59,7 @@ data:
         {
           "activation_threshold": 3,
           "admin_threshold": 3,
-          "//name": "GRFN SAS",
+          "//name": "admin multisig",
           "participants": [
           {
             "signature": "0E95C039EF14EE329D0E09D84F909CF9EB5EF472",
@@ -70,18 +70,18 @@ data:
         ],
         "update_validators": {
           "addresses": [
-            "cond:gov/rule/0000000000000003"
+            "cond:multisig/usage/0000000000000001"
           ]
         },
         "conf": {
           "cash": {
-            "owner": "cond:gov/rule/0000000000000002",
-            "collector_address": "cond:gov/rule/0000000000000002",
+            "owner": "cond:multisig/usage/0000000000000001",
+            "collector_address": "cond:multisig/usage/0000000000000001",
             "minimal_fee": "0.0 GRFN"
           },
           "migration": {
-            "admin": "cond:gov/rule/0000000000000003",
-            "//admin": "owned by technical executors"
+            "admin": "cond:multisig/usage/0000000000000001",
+            "//admin": "owned by admin multisig"
           }
         },
         "msgfee": [],
