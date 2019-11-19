@@ -39,7 +39,7 @@ destination account.
 			Ref:         nil,
 		},
 	}
-	if err:= msg.CashSendMsg.Validate(); err!=nil{
+	if err := msg.CashSendMsg.Validate(); err != nil {
 		flagDie("invalid args: %s", err)
 	}
 	tx := &grafain.Tx{

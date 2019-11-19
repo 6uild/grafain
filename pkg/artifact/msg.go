@@ -21,12 +21,7 @@ func (CreateArtifactMsg) Path() string {
 func (m CreateArtifactMsg) Validate() error {
 	var errs error
 	errs = errors.AppendField(errs, "Metadata", m.Metadata.Validate())
-	switch l := len(m.Image); {
-	case l == 0:
-		errs = errors.AppendField(errs, "Image", errors.ErrEmpty)
-	case l > 255:
-		errs = errors.AppendField(errs, "Image", errors.Wrap(errors.ErrInput, "too long"))
-	}
+	errs = errors.AppendField(errs, "Image", m.Image.Validate())
 	if !isChecksum(m.Checksum) {
 		errs = errors.AppendField(errs, "Checksum", errors.ErrInput)
 	}
@@ -46,9 +41,5 @@ func (DeleteArtifactMsg) Path() string {
 func (m DeleteArtifactMsg) Validate() error {
 	var errs error
 	errs = errors.AppendField(errs, "Metadata", m.Metadata.Validate())
-	switch l := len(m.ID); {
-	case l == 0:
-		errs = errors.AppendField(errs, "Id", errors.Wrap(errors.ErrEmpty, "id missing"))
-	}
-	return errs
+	return errors.AppendField(errs, "Image", m.Image.Validate())
 }

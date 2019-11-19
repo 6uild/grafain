@@ -10,9 +10,9 @@ type Initializer struct{}
 var _ weave.Initializer = (*Initializer)(nil)
 
 // FromGenesis will parse initial artifacts data from genesis and save it to the database
-func (Initializer) FromGenesis(opts weave.Options, params weave.GenesisParams, kv weave.KVStore) error {
+func (Initializer) FromGenesis(opts weave.Options, params weave.GenesisParams, db weave.KVStore) error {
 	type genesisArtifact struct {
-		Image    string        `json:"image"`
+		Image    Image         `json:"image"`
 		Checksum string        `json:"checksum"`
 		Owner    weave.Address `json:"owner"`
 	}
@@ -37,10 +37,11 @@ func (Initializer) FromGenesis(opts weave.Options, params weave.GenesisParams, k
 		if err := newArtifact.Validate(); err != nil {
 			return errors.Wrapf(err, "[%d] artifact %q is invalid", i, newArtifact.Image)
 		}
-
-		if _, err := bucket.Put(kv, nil, &newArtifact); err != nil {
+		if err := bucket.Has(db, []byte(newArtifact.Image)); !errors.ErrNotFound.Is(err) {
+			return errors.Wrapf(err, "[%d]  image must %q not exist", i, newArtifact.Image)
+		}
+		if _, err := bucket.Put(db, []byte(newArtifact.Image), &newArtifact); err != nil {
 			return errors.Wrapf(err, "[%d] failed to store artifact %q", i, newArtifact.Image)
 		}
 	}
-
 }

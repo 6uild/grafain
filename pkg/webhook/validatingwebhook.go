@@ -70,12 +70,12 @@ func encodeErr(err error) (int32, error) {
 	return http.StatusInternalServerError, err
 }
 
-const queryPath = "/artifacts/image"
+const queryByImage = "/artifacts"
 
 func (v *podValidator) doWithContainers(containers []corev1.Container) error {
 	for _, c := range containers {
 		v.logger.Info("inspecting container", "image", c.Image, "name", c.Name)
-		resp, err := v.source.AbciQuery(queryPath, []byte(c.Image))
+		resp, err := v.source.AbciQuery(queryByImage, []byte(c.Image))
 		if err != nil {
 			return errors.Wrap(err, "failed to query backend")
 		}

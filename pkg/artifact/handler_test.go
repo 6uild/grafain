@@ -33,7 +33,7 @@ func TestCreateArtifact(t *testing.T) {
 			expPersisted: func(t *testing.T, db weave.KVStore, res *weave.DeliverResult) {
 				var l Artifact
 				assert.Nil(t, bucket.One(db, res.Data, &l))
-				assert.Equal(t, "example/image:version", l.Image)
+				assert.Equal(t, Image("example/image:version"), l.Image)
 				assert.Equal(t, "anyValidChecksum", l.Checksum)
 				assert.Equal(t, alice.Address(), l.Owner)
 			},
@@ -47,7 +47,7 @@ func TestCreateArtifact(t *testing.T) {
 			expPersisted: func(t *testing.T, db weave.KVStore, res *weave.DeliverResult) {
 				var l Artifact
 				assert.Nil(t, bucket.One(db, res.Data, &l))
-				assert.Equal(t, "example/image:version", l.Image)
+				assert.Equal(t, Image("example/image:version"), l.Image)
 				assert.Equal(t, "anyValidChecksum", l.Checksum)
 				assert.Equal(t, alice.Address(), l.Owner)
 			},
@@ -122,7 +122,6 @@ func TestDeleteArtifact(t *testing.T) {
 		Owner:    alice.Address(),
 	}
 
-	myArtifactID := weavetest.SequenceID(1)
 	specs := map[string]struct {
 		src           *DeleteArtifactMsg
 		signer        weave.Condition
@@ -133,7 +132,7 @@ func TestDeleteArtifact(t *testing.T) {
 		"happy path": {
 			src: &DeleteArtifactMsg{
 				Metadata: &weave.Metadata{Schema: 1},
-				ID:       myArtifactID,
+				Image:    "example/image:version",
 			},
 			signer:     alice,
 			expDeleted: true,
@@ -141,7 +140,7 @@ func TestDeleteArtifact(t *testing.T) {
 		"requires owner authz": {
 			src: &DeleteArtifactMsg{
 				Metadata: &weave.Metadata{Schema: 1},
-				ID:       myArtifactID,
+				Image:    "example/image:version",
 			},
 			signer:        anyBody,
 			expCheckErr:   errors.ErrUnauthorized,
@@ -156,7 +155,8 @@ func TestDeleteArtifact(t *testing.T) {
 			auth := &weavetest.Auth{Signers: []weave.Condition{spec.signer}}
 			bucket := NewBucket()
 
-			_, err := bucket.Put(db, myArtifactID, myExample)
+			myImage := spec.src.Image
+			_, err := bucket.Put(db, []byte(myImage), myExample)
 			assert.Nil(t, err)
 
 			r := DeleteArtifactHandler{auth: auth, b: bucket}
@@ -177,7 +177,7 @@ func TestDeleteArtifact(t *testing.T) {
 			}
 
 			if spec.expDeleted {
-				assert.IsErr(t, errors.ErrNotFound, bucket.One(cache, spec.src.ID, nil))
+				assert.IsErr(t, errors.ErrNotFound, bucket.One(cache, []byte(myImage), nil))
 			}
 		})
 	}
@@ -192,20 +192,19 @@ func TestQueries(t *testing.T) {
 		Owner:    alice.Address(),
 	}
 
-	myArtifactID := weavetest.SequenceID(1)
 	specs := map[string]struct {
 		queryPath      string
 		queryData      []byte
 		expResultCount int
 	}{
 		"find by name": {
-			queryPath:      "/artifacts/image",
+			queryPath:      "/artifacts",
 			queryData:      []byte("example/image:version"),
 			expResultCount: 1,
 		},
 		"find by id": {
-			queryPath:      "/artifacts",
-			queryData:      myArtifactID,
+			queryPath:      "/artifacts/checksum",
+			queryData:      []byte("anyValidChecksum"),
 			expResultCount: 1,
 		},
 		"find all": {
@@ -213,12 +212,12 @@ func TestQueries(t *testing.T) {
 			expResultCount: 1,
 		},
 		"find by unknown name": {
-			queryPath: "/artifacts/image",
+			queryPath: "/artifacts",
 			queryData: []byte("unknown"),
 		},
-		"find by unknown id": {
-			queryPath: "/artifacts",
-			queryData: weavetest.SequenceID(9999),
+		"find by unknown checksum": {
+			queryPath: "/artifacts/checksum",
+			queryData: []byte("unknown"),
 		},
 	}
 	for msg, spec := range specs {
@@ -227,7 +226,7 @@ func TestQueries(t *testing.T) {
 			migration.MustInitPkg(db, PackageName)
 			bucket := NewBucket()
 
-			_, err := bucket.Put(db, myArtifactID, myArtifact)
+			_, err := bucket.Put(db, []byte(myArtifact.Image), myArtifact)
 			assert.Nil(t, err)
 			qr := weave.NewQueryRouter()
 			RegisterQuery(qr)

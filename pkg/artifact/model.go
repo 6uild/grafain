@@ -20,12 +20,8 @@ func (m *Artifact) Validate() error {
 	var errs error
 	errs = errors.AppendField(errs, "Metadata", m.Metadata.Validate())
 	errs = errors.AppendField(errs, "owner", m.Owner.Validate())
-	switch l := len(m.Image); {
-	case l == 0:
-		errs = errors.AppendField(errs, "Image", errors.ErrEmpty)
-	case l > 255:
-		errs = errors.AppendField(errs, "Image", errors.Wrap(errors.ErrInput, "too long"))
-	}
+	errs = errors.AppendField(errs, "Image", m.Image.Validate())
+
 	if !isChecksum(m.Checksum) {
 		errs = errors.AppendField(errs, "Checksum", errors.ErrInput)
 	}
@@ -38,4 +34,18 @@ func (m *Artifact) Copy() orm.CloneableData {
 		Image:    m.Image,
 		Checksum: m.Checksum,
 	}
+}
+
+const maxImageLength = 255
+
+type Image string
+
+func (i Image) Validate() error {
+	switch l := len(i); {
+	case l == 0:
+		return errors.ErrEmpty
+	case l > maxImageLength:
+		return errors.Wrapf(errors.ErrInput, "exceeds max length: %d", maxImageLength)
+	}
+	return nil
 }

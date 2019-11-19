@@ -24,7 +24,7 @@ func (c Client) CreateArtifact(owner weave.Address, image, checksum string) *gra
 			CreateArtifactMsg: &artifact.CreateArtifactMsg{
 				Metadata: &weave.Metadata{Schema: 1},
 				Owner:    owner,
-				Image:    image,
+				Image:    artifact.Image(image),
 				Checksum: checksum,
 			},
 		},
@@ -42,19 +42,26 @@ func SignTx(tx *grafain.Tx, signer *crypto.PrivateKey, chainID string, nonce int
 	return nil
 }
 
-func (c Client) GetArtifactByImage(name string) (*artifact.Artifact, error) {
-	resp, err := c.AbciQuery("/artifacts/image", []byte(name))
+func (c Client) GetArtifactsByChecksum(checksum string) ([]*artifact.Artifact, error) {
+	resp, err := c.AbciQuery("/artifacts/checksum", []byte(checksum))
 	if err != nil {
 		return nil, err
 	}
 	if len(resp.Models) == 0 {
 		return nil, errors.ErrNotFound
 	}
-	var x artifact.Artifact
-	return &x, x.Unmarshal(resp.Models[0].Value)
+	result := make([]*artifact.Artifact, len(resp.Models))
+	for i, m := range resp.Models {
+		var x artifact.Artifact
+		if err := x.Unmarshal(m.Value); err != nil {
+			return nil, err
+		}
+		result[i] = &x
+	}
+	return result, nil
 }
 
-func (c Client) GetArtifactByID(id []byte) (*artifact.Artifact, error) {
+func (c Client) GetArtifactByImage(id []byte) (*artifact.Artifact, error) {
 	resp, err := c.AbciQuery("/artifacts", id)
 	if err != nil {
 		return nil, err

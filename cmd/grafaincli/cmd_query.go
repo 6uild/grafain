@@ -112,13 +112,13 @@ var queries = map[string]struct {
 }{
 	"/artifacts": {
 		newObj: func() model { return &artifact.Artifact{} },
-		decKey: sequenceKey,
-		encID:  numericID,
+		decKey: stringKey,
+		encID:  stringID,
 	},
-	"/artifacts/image": {
+	"/artifacts/checksum": {
 		newObj: func() model { return &artifact.Artifact{} },
-		decKey: sequenceKey,
-		encID:  plainID,
+		decKey: stringKey,
+		encID:  stringID,
 	},
 	"/proposals": {
 		newObj: func() model { return &extendedProposal{} },
@@ -232,6 +232,10 @@ func addressID(s string) ([]byte, error) {
 	return weave.ParseAddress(s)
 }
 
+func stringID(s string) ([]byte, error) {
+	return []byte(s), nil
+}
+
 func numericID(s string) ([]byte, error) {
 	n, err := strconv.ParseUint(s, 10, 64)
 	if err != nil {
@@ -271,6 +275,10 @@ func sequenceKey(raw []byte) (string, error) {
 
 func hexKey(raw []byte) (string, error) {
 	return hex.EncodeToString(raw), nil
+}
+
+func stringKey(raw []byte) (string, error) {
+	return string(raw), nil
 }
 
 // extendedProposal is the gov.Proposal with an additional field to extract

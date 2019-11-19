@@ -10,7 +10,7 @@ message Artifact {
   // Owner is the address that is allowed ot modify or delete this entity.
   bytes owner = 2 [(gogoproto.casttype) = "github.com/iov-one/weave.Address"];
   // Container image url like`gcr.io/projectID/imagename@sha256:123456`
-  string image = 3;
+  string image = 3 [(gogoproto.casttype) = "Image"];
   // Hash or checksum value of a binary, or Docker Registry 2.0 digest of a container.
   string checksum = 4;
 }
@@ -18,7 +18,7 @@ message Artifact {
 message CreateArtifactMsg {
   weave.Metadata metadata = 1;
   // Container image url like`gcr.io/projectID/imagename@sha256:123456`
-  string image = 2;
+  string image = 2 [(gogoproto.casttype) = "Image"];
   // Hash or checksum value of a binary, or Docker Registry 2.0 digest of a container.
   string checksum = 3;
   // Owner is the address that is allowed ot modify or delete this entity.
@@ -28,6 +28,6 @@ message CreateArtifactMsg {
 
 message DeleteArtifactMsg {
   weave.Metadata metadata = 1;
-  // Unique identifier of the Artifact
-  bytes id = 2 [(gogoproto.customname) = "ID"];
+  // Container image url like`gcr.io/projectID/imagename@sha256:123456`
+  string image = 2 [(gogoproto.casttype) = "Image"];
 }

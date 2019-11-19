@@ -39,7 +39,7 @@ Store a new Artifact data entry.
 			CreateArtifactMsg: &artifact.CreateArtifactMsg{
 				Metadata: &weave.Metadata{Schema: 1},
 				Owner:    *ownerFl,
-				Image:    *imageFl,
+				Image:    artifact.Image(*imageFl),
 				Checksum: *digestFl,
 			},
 		},
@@ -58,20 +58,20 @@ Delete an Artifact data entry.
 		fl.PrintDefaults()
 	}
 	var (
-		artifactIDFl = flSeq(fl, "id", "", "Id of the artifact to delete")
+		artifactImageFl = fl.String("image", "", "Full image name of the artifact to delete")
 	)
 	if err := fl.Parse(args); err != nil {
 		flagDie("failed to parse arguments")
 
 	}
-	if len(*artifactIDFl) == 0 {
+	if len(*artifactImageFl) == 0 {
 		flagDie("id can not be empty")
 	}
 	tx := grafain.Tx{
 		Sum: &grafain.Tx_DeleteArtifactMsg{
 			DeleteArtifactMsg: &artifact.DeleteArtifactMsg{
 				Metadata: &weave.Metadata{Schema: 1},
-				ID:       *artifactIDFl,
+				Image:    artifact.Image(*artifactImageFl),
 			},
 		},
 	}

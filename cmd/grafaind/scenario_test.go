@@ -113,7 +113,7 @@ func TestEndToEndScenario(t *testing.T) {
 	assert.Nil(t, rsp.IsError())
 
 	// then get and list artifact should succeed
-	a, err := gClient.GetArtifactByID(rsp.Response.DeliverTx.Data)
+	a, err := gClient.GetArtifactByImage(rsp.Response.DeliverTx.Data)
 	assert.Nil(t, err)
 	assert.Equal(t, "myChecksum", a.Checksum)
 	assert.Equal(t, alice, a.Owner)

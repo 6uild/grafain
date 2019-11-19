@@ -44,7 +44,7 @@ func TestQueryWeave(t *testing.T) {
 		t.Run(msg, func(t *testing.T) {
 			bucket := artifact.NewBucket()
 			for _, v := range spec.stored {
-				_, err := bucket.Put(db, nil, v)
+				_, err := bucket.Put(db, []byte(v.Image), v)
 				assert.Nil(t, err)
 			}
 			store := newArtifactQueryAdapter(db)
