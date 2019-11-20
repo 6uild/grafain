@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/alpe/grafain/pkg/artifact"
-	"github.com/iov-one/weave/weavetest"
 	"github.com/iov-one/weave/weavetest/assert"
 )
 
@@ -36,7 +35,7 @@ func TestCreateArtifact(t *testing.T) {
 func TestDeleteArtifact(t *testing.T) {
 	var output bytes.Buffer
 	args := []string{
-		"-id", "1",
+		"-image", "foo/bar:v0.0.1",
 	}
 	if err := cmdDeleteArtifact(nil, &output, args); err != nil {
 		t.Fatalf("cannot create a transaction: %s", err)
@@ -49,5 +48,5 @@ func TestDeleteArtifact(t *testing.T) {
 	assert.Nil(t, err)
 
 	msg := txmsg.(*artifact.DeleteArtifactMsg)
-	assert.Equal(t, weavetest.SequenceID(1), msg.ID)
+	assert.Equal(t, artifact.Image("foo/bar:v0.0.1"), msg.Image)
 }

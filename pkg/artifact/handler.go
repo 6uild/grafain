@@ -47,21 +47,17 @@ func (h CreateArtifactHandler) Deliver(ctx weave.Context, db weave.KVStore, tx w
 		return nil, err
 	}
 
-	id, err := artifactIDSeq.NextVal(db)
-	if err != nil {
-		return nil, errors.Wrap(err, "cannot acquire key")
-	}
 	artifact := &Artifact{
 		Metadata: &weave.Metadata{},
 		Image:    msg.Image,
 		Checksum: msg.Checksum,
 		Owner:    msg.Owner,
 	}
-	if _, err := h.b.Put(db, id, artifact); err != nil {
+	if _, err := h.b.Put(db, []byte(msg.Image), artifact); err != nil {
 		return nil, errors.Wrap(err, "failed to store artifact")
 	}
 
-	return &weave.DeliverResult{Data: id}, err
+	return &weave.DeliverResult{Data: []byte(msg.Image)}, err
 }
 
 // validate does all common pre-processing between Check and Deliver
@@ -101,7 +97,7 @@ func (h DeleteArtifactHandler) Deliver(ctx weave.Context, db weave.KVStore, tx w
 	if err != nil {
 		return nil, err
 	}
-	if err := h.b.Delete(db, msg.ID); err != nil {
+	if err := h.b.Delete(db, []byte(msg.Image)); err != nil {
 		return nil, errors.Wrap(err, "failed to delete entity")
 	}
 	return &weave.DeliverResult{}, err
@@ -114,7 +110,7 @@ func (h DeleteArtifactHandler) validate(ctx weave.Context, db weave.KVStore, tx 
 	}
 
 	var a Artifact
-	if err := h.b.One(db, msg.ID, &a); err != nil {
+	if err := h.b.One(db, []byte(msg.Image), &a); err != nil {
 		return nil, errors.Wrap(err, "cannot load artifact entity from the store")
 	}
 	if !h.auth.HasAddress(ctx, a.Owner) {
