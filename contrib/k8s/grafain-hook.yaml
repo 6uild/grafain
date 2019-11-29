@@ -10,13 +10,24 @@ webhooks:
   failurePolicy: Fail
   rules:
     - apiGroups:
-        - ""
+        - "*"
       apiVersions:
-        - v1
+        - "*"
       operations:
         - CREATE
+        - UPDATE
+        - CONNECT
       resources:
         - pods
+        - deployments
+        - replicationcontrollers
+        - replicasets
+        - daemonsets
+        - statefulsets
+        - jobs
+        - cronjobs
+        - ingresses
+        - pods/exec
       scope: "Namespaced"
   clientConfig:
     service:

@@ -1,6 +1,8 @@
 package webhook
 
 import (
+	"bytes"
+	"io/ioutil"
 	"net/http"
 	"strconv"
 	"strings"
@@ -33,11 +35,14 @@ func Start(mgr manager.Manager, rpcAddress, hookServerAddress string, certDir, a
 	grafainClient := client.NewClient(weaveclient.NewHTTPConnection(rpcAddress))
 
 	logger.Info("Registering webhooks to the internal webhook server")
-	hookServer.Register(admissionPath, &webhook.Admission{
-		Handler: NewPodValidator(
-			grafainClient,
-			logger.With("module", "pod-validator"),
-		),
+	hookServer.Register(admissionPath, &DebugHandler{
+		Logger: logger.With("module", "debugger"),
+		Handler: &webhook.Admission{
+			Handler: NewPodValidator(
+				grafainClient,
+				logger.With("module", "pod-validator"),
+			),
+		},
 	})
 	hookServer.Register("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
@@ -50,4 +55,19 @@ func Start(mgr manager.Manager, rpcAddress, hookServerAddress string, certDir, a
 	}
 	logger.Info("Stopped")
 	return nil
+}
+
+type DebugHandler struct {
+	Logger  log.Logger
+	Handler http.Handler
+}
+
+func (d DebugHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
+	var body []byte
+	if req.Body != nil {
+		body, _ = ioutil.ReadAll(req.Body)
+		req.Body = ioutil.NopCloser(bytes.NewReader(body))
+	}
+	d.Logger.Info("handling request", "body", string(body))
+	d.Handler.ServeHTTP(resp, req)
 }
