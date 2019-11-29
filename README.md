@@ -21,6 +21,10 @@ for Kubernetes are not. What you can expect to work:
 - A functional [command line client](cmd/grafaincli)
 - A local minikube [test environment](contrib/k8s)
 
+Supported policies
+- Accept only white listed images 
+
+
 ## Server
 
 
@@ -208,6 +212,7 @@ make dist
 
 
 ## Other Admission Controller
+* https://github.com/cruise-automation/k-rail
 * https://github.com/IBM/portieris
 * https://github.com/open-policy-agent/gatekeeper
 * https://github.com/grafeas/kritis
