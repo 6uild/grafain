@@ -38,20 +38,6 @@ func TestCreateArtifact(t *testing.T) {
 				assert.Equal(t, alice.Address(), l.Owner)
 			},
 		},
-		"main signer becomes owner when empty": {
-			src: &CreateArtifactMsg{
-				Metadata: &weave.Metadata{Schema: 1},
-				Image:    "example/image:version",
-				Checksum: "anyValidChecksum",
-			},
-			expPersisted: func(t *testing.T, db weave.KVStore, res *weave.DeliverResult) {
-				var l Artifact
-				assert.Nil(t, bucket.One(db, res.Data, &l))
-				assert.Equal(t, Image("example/image:version"), l.Image)
-				assert.Equal(t, "anyValidChecksum", l.Checksum)
-				assert.Equal(t, alice.Address(), l.Owner)
-			},
-		},
 		"owner must sign on create": {
 			src: &CreateArtifactMsg{
 				Metadata: &weave.Metadata{Schema: 1},

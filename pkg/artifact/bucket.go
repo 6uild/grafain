@@ -1,17 +1,18 @@
 package artifact
 
 import (
+	"github.com/alpe/grafain/pkg/orm"
 	"github.com/iov-one/weave"
 	"github.com/iov-one/weave/errors"
 	"github.com/iov-one/weave/migration"
-	"github.com/iov-one/weave/orm"
+	weaveORM "github.com/iov-one/weave/orm"
 )
 
 const checksumIndex = "checksum"
 const bucketName = "artifact"
 
 type Bucket struct {
-	orm.ModelBucket
+	weaveORM.ModelBucket
 }
 
 func NewBucket() *Bucket {
@@ -28,7 +29,7 @@ func NewBucket() *Bucket {
 // The key must be the artifact image and not empty.
 // Using a key that already exists in the database cause the value to
 // be overwritten.
-func (b *Bucket) Put(db weave.KVStore, image []byte, m orm.Model) ([]byte, error) {
+func (b *Bucket) Put(db weave.KVStore, image []byte, m weaveORM.Model) ([]byte, error) {
 	if len(image) == 0 {
 		return nil, errors.Wrap(errors.ErrInput, "empty key not allowed")
 	}
@@ -36,7 +37,7 @@ func (b *Bucket) Put(db weave.KVStore, image []byte, m orm.Model) ([]byte, error
 }
 
 // indexChecksum is an indexer implementation for checksum as a second index.
-func indexChecksum(obj orm.Object) (bytes []byte, e error) {
+func indexChecksum(obj weaveORM.Object) (bytes []byte, e error) {
 	if obj == nil {
 		return nil, errors.Wrap(errors.ErrHuman, "cannot take index of nil")
 	}

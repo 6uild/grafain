@@ -82,6 +82,10 @@ data:
           "migration": {
             "admin": "cond:multisig/usage/0000000000000001",
             "//admin": "owned by admin multisig"
+          },
+          "msgfee": {
+            "owner": "cond:multisig/usage/0000000000000001",
+            "fee_admin": "cond:multisig/usage/0000000000000001",
           }
         },
         "msgfee": [],
@@ -145,6 +149,10 @@ data:
         },
         {
           "pkg": "paychan",
+          "ver": 1
+        },
+        {
+          "pkg": "rbac",
           "ver": 1
         },
         {

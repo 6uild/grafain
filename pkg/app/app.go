@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/alpe/grafain/pkg/artifact"
+	"github.com/alpe/grafain/pkg/rbac"
 	"github.com/iov-one/weave"
 	"github.com/iov-one/weave/app"
 	"github.com/iov-one/weave/coin"
@@ -38,7 +39,7 @@ import (
 // Authenticator returns the typical authentication,
 // just using public key signatures
 func Authenticator() x.Authenticator {
-	return x.ChainAuth(sigs.Authenticate{}, multisig.Authenticate{})
+	return x.ChainAuth(sigs.Authenticate{}, multisig.Authenticate{}, rbac.Authenticate{})
 }
 
 // Chain returns a chain of decorators, to handle authentication,
@@ -56,6 +57,7 @@ func Chain(authFn x.Authenticator, minFee coin.Coin) app.Decorators {
 		utils.NewSavepoint().OnCheck(),
 		sigs.NewDecorator(),
 		multisig.NewDecorator(authFn),
+		rbac.NewDecorator(authFn),
 		// cash.NewDynamicFeeDecorator embeds utils.NewSavepoint().OnDeliver()
 		cash.NewDynamicFeeDecorator(authFn, ctrl),
 		msgfee.NewAntispamFeeDecorator(minFee),

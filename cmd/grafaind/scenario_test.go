@@ -103,7 +103,9 @@ func TestEndToEndScenario(t *testing.T) {
 	gClient := client.NewClient(rpcclient.NewLocal(node))
 
 	// create artifact should succeed
-	tx := gClient.CreateArtifact(alice, "foo/bar:v0.0.1", "myChecksum")
+	adminGroupAddress, err := weave.ParseAddress("seq:rbac/role/1")
+	assert.Nil(t, err)
+	tx := gClient.CreateArtifact(adminGroupAddress, "foo/bar:v0.0.1", "myChecksum")
 	nonce := client.NewNonce(gClient, alice)
 	seq, err := nonce.Next()
 	assert.Nil(t, err)
@@ -116,7 +118,7 @@ func TestEndToEndScenario(t *testing.T) {
 	a, err := gClient.GetArtifactByImage(rsp.Response.DeliverTx.Data)
 	assert.Nil(t, err)
 	assert.Equal(t, "myChecksum", a.Checksum)
-	assert.Equal(t, alice, a.Owner)
+	assert.Equal(t, adminGroupAddress, a.Owner)
 	assert.Nil(t, err)
 
 	all, err := gClient.ListArtifact()
@@ -178,11 +180,42 @@ func initGenesis(t *testing.T, filename string, alice weave.Address) {
 			"cash": cash.Configuration{
 				CollectorAddress: alice,
 			},
+			"msgfee": dict{
+				"owner":     alice,
+				"fee_admin": alice,
+			},
+		},
+		"rbac": dict{
+			"roles": []dict{
+				{
+					"name":  "system.admin",
+					"owner": "seq:rbac/role/1",
+				},
+				{
+					"name":     "k8s.devop",
+					"owner":    "seq:rbac/role/1",
+					"role_ids": []int{1},
+				},
+			},
+			"users": []dict{
+				{
+					"name": "Alice",
+					"signatures": []weave.Address{
+						alice,
+					},
+				},
+			},
+			"role_bindings": []dict{
+				{
+					"role_id":   2,
+					"signature": alice,
+				},
+			},
 		},
 		"artifacts": []dict{
-			dict{
+			{
 				"image":    "alpetest/grafain:vx.y.z",
-				"owner":    alice,
+				"owner":    "seq:rbac/role/1",
 				"checksum": "anyValidChecksum",
 			},
 		},
@@ -198,6 +231,7 @@ func initGenesis(t *testing.T, filename string, alice weave.Address) {
 			{"ver": 1, "pkg": "msgfee"},
 			{"ver": 1, "pkg": "multisig"},
 			{"ver": 1, "pkg": "paychan"},
+			{"ver": 1, "pkg": "rbac"},
 			{"ver": 1, "pkg": "sigs"},
 			{"ver": 1, "pkg": "utils"},
 			{"ver": 1, "pkg": "validators"},

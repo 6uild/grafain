@@ -68,12 +68,8 @@ func (h CreateArtifactHandler) validate(ctx weave.Context, db weave.KVStore, tx 
 		return nil, errors.Wrap(err, "load msg")
 	}
 
-	if msg.Owner != nil {
-		if !h.auth.HasAddress(ctx, msg.Owner) {
-			return nil, errors.Wrap(errors.ErrUnauthorized, "owner's signature required")
-		}
-	} else {
-		msg.Owner = x.MainSigner(ctx, h.auth).Address()
+	if !h.auth.HasAddress(ctx, msg.Owner) {
+		return nil, errors.Wrap(errors.ErrUnauthorized, "owner's signature required")
 	}
 
 	return &msg, nil

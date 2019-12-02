@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+package rbac;
+
+import "codec.proto";
+import "gogoproto/gogo.proto";
+
+message Role {
+  weave.Metadata metadata = 1;
+  string name = 2;
+  // Address of this entity. Set during creation and does not change.
+  bytes address = 3 [(gogoproto.casttype) = "github.com/iov-one/weave.Address"];
+  repeated bytes role_ids = 4;
+  bytes owner = 6 [(gogoproto.casttype) = "github.com/iov-one/weave.Address"];
+}
+
+message RoleBinding {
+  weave.Metadata metadata = 1;
+  bytes role_id = 2; //[(gogoproto.customname) = "ContractID"];
+  bytes signature = 3 [(gogoproto.casttype) = "github.com/iov-one/weave.Address"];
+}
+
+// natural key: signature:role_id (unique) to allow prefix scan with signature to get all
+
+message User {
+  weave.Metadata metadata = 1;
+  string name = 2;
+  repeated bytes signature = 3 [(gogoproto.casttype) = "github.com/iov-one/weave.Address"];
+}
+
+// second index on signatures (unique)
+
+// 1. get rolebindings by participant address (second index)
+// 2. get roles by id
+// 3. add role address to authZ context
+// 4. for all rules ref in there and not processed: goto 2
+
+//message CreateMsg {
+//  weave.Metadata metadata = 1;
+//  repeated Participant participants = 2;
+//  uint32 activation_threshold = 3 [(gogoproto.casttype) = "Weight"];
+//  uint32 admin_threshold = 4 [(gogoproto.casttype) = "Weight"];
+//}
+//
+//message UpdateMsg {
+//  weave.Metadata metadata = 1;
+//  bytes contract_id = 2 [(gogoproto.customname) = "ContractID"];
+//  repeated Participant participants = 3;
+//  uint32 activation_threshold = 4 [(gogoproto.casttype) = "Weight"];
+//  uint32 admin_threshold = 5 [(gogoproto.casttype) = "Weight"];
+//}
