@@ -9,7 +9,7 @@ import (
 )
 
 const roleBucketName = "role"
-const userBucketName = "user"
+const principalBucketName = "principal"
 const roleBindingBucketName = "rolebind"
 const SignatureIndex = "signature"
 
@@ -30,31 +30,31 @@ func NewRoleBucket() *RoleBucket {
 	}
 }
 
-type UserBucket struct {
+type PrincipalBucket struct {
 	weaveORM.ModelBucket
 }
 
-func NewUserBucket() *UserBucket {
-	b := orm.NewModelBucket(userBucketName, &User{},
+func NewPrincipalBucket() *PrincipalBucket {
+	b := orm.NewModelBucket(principalBucketName, &Principal{},
 		orm.WithMultiIndex(SignatureIndex, indexSignatures, true),
 	)
-	return &UserBucket{
+	return &PrincipalBucket{
 		ModelBucket: migration.NewModelBucket(PackageName, b),
 	}
 }
 
-// indexSignature is an indexer implementation for user's signatures as a second index.
+// indexSignature is an indexer implementation for principal's signatures as a second index.
 func indexSignatures(obj weaveORM.Object) (bytes [][]byte, e error) {
 	if obj == nil {
 		return nil, errors.Wrap(errors.ErrHuman, "cannot take index of nil")
 	}
-	v, ok := obj.Value().(*User)
+	v, ok := obj.Value().(*Principal)
 	if !ok {
-		return nil, errors.Wrap(errors.ErrHuman, "Can only take index of User")
+		return nil, errors.Wrap(errors.ErrHuman, "Can only take index of Principal")
 	}
-	r := make([][]byte, len(v.Signature))
-	for i, v := range v.Signature {
-		r[i] = v
+	r := make([][]byte, len(v.Signatures))
+	for i, v := range v.Signatures {
+		r[i] = v.Signature
 	}
 	return r, nil
 }

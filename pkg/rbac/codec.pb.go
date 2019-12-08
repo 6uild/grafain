@@ -24,13 +24,18 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
 
+// Role
 type Role struct {
-	Metadata *weave.Metadata `protobuf:"bytes,1,opt,name=metadata,proto3" json:"metadata,omitempty"`
-	Name     string          `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Metadata    *weave.Metadata `protobuf:"bytes,1,opt,name=metadata,proto3" json:"metadata,omitempty"`
+	Name        string          `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Description string          `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
 	// Address of this entity. Set during creation and does not change.
-	Address github_com_iov_one_weave.Address `protobuf:"bytes,3,opt,name=address,proto3,casttype=github.com/iov-one/weave.Address" json:"address,omitempty"`
-	RoleIds [][]byte                         `protobuf:"bytes,4,rep,name=role_ids,json=roleIds,proto3" json:"role_ids,omitempty"`
-	Owner   github_com_iov_one_weave.Address `protobuf:"bytes,6,opt,name=owner,proto3,casttype=github.com/iov-one/weave.Address" json:"owner,omitempty"`
+	Address github_com_iov_one_weave.Address `protobuf:"bytes,4,opt,name=address,proto3,casttype=github.com/iov-one/weave.Address" json:"address,omitempty"`
+	// RoleIDs refer to other roles that are included into this one.
+	RoleIds [][]byte `protobuf:"bytes,5,rep,name=role_ids,json=roleIds,proto3" json:"role_ids,omitempty"`
+	// todo: do we need an owner when permissions are use? Same applies to other entities here
+	Owner       github_com_iov_one_weave.Address `protobuf:"bytes,6,opt,name=owner,proto3,casttype=github.com/iov-one/weave.Address" json:"owner,omitempty"`
+	Permissions []Permission                     `protobuf:"bytes,7,rep,name=permissions,proto3,casttype=Permission" json:"permissions,omitempty"`
 }
 
 func (m *Role) Reset()         { *m = Role{} }
@@ -80,6 +85,13 @@ func (m *Role) GetName() string {
 	return ""
 }
 
+func (m *Role) GetDescription() string {
+	if m != nil {
+		return m.Description
+	}
+	return ""
+}
+
 func (m *Role) GetAddress() github_com_iov_one_weave.Address {
 	if m != nil {
 		return m.Address
@@ -101,6 +113,14 @@ func (m *Role) GetOwner() github_com_iov_one_weave.Address {
 	return nil
 }
 
+func (m *Role) GetPermissions() []Permission {
+	if m != nil {
+		return m.Permissions
+	}
+	return nil
+}
+
+// RoleBinding links  a signature to a role.
 type RoleBinding struct {
 	Metadata  *weave.Metadata                  `protobuf:"bytes,1,opt,name=metadata,proto3" json:"metadata,omitempty"`
 	RoleId    []byte                           `protobuf:"bytes,2,opt,name=role_id,json=roleId,proto3" json:"role_id,omitempty"`
@@ -161,24 +181,28 @@ func (m *RoleBinding) GetSignature() github_com_iov_one_weave.Address {
 	return nil
 }
 
-type User struct {
-	Metadata  *weave.Metadata                    `protobuf:"bytes,1,opt,name=metadata,proto3" json:"metadata,omitempty"`
-	Name      string                             `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Signature []github_com_iov_one_weave.Address `protobuf:"bytes,3,rep,name=signature,proto3,casttype=github.com/iov-one/weave.Address" json:"signature,omitempty"`
+// Principal is a human user or service account.
+type Principal struct {
+	Metadata    *weave.Metadata `protobuf:"bytes,1,opt,name=metadata,proto3" json:"metadata,omitempty"`
+	Name        string          `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Description string          `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	// NamedSignature contains a set of name, signatures pairs. A principal can have 1 or more signatures associated with
+	// his account. Names and signature must both be unique within this set.
+	Signatures []*NamedSignature `protobuf:"bytes,4,rep,name=signatures,proto3" json:"signatures,omitempty"`
 }
 
-func (m *User) Reset()         { *m = User{} }
-func (m *User) String() string { return proto.CompactTextString(m) }
-func (*User) ProtoMessage()    {}
-func (*User) Descriptor() ([]byte, []int) {
+func (m *Principal) Reset()         { *m = Principal{} }
+func (m *Principal) String() string { return proto.CompactTextString(m) }
+func (*Principal) ProtoMessage()    {}
+func (*Principal) Descriptor() ([]byte, []int) {
 	return fileDescriptor_3cb708fc58e15f81, []int{2}
 }
-func (m *User) XXX_Unmarshal(b []byte) error {
+func (m *Principal) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *User) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *Principal) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_User.Marshal(b, m, deterministic)
+		return xxx_messageInfo_Principal.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalTo(b)
@@ -188,33 +212,101 @@ func (m *User) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return b[:n], nil
 	}
 }
-func (m *User) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_User.Merge(m, src)
+func (m *Principal) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Principal.Merge(m, src)
 }
-func (m *User) XXX_Size() int {
+func (m *Principal) XXX_Size() int {
 	return m.Size()
 }
-func (m *User) XXX_DiscardUnknown() {
-	xxx_messageInfo_User.DiscardUnknown(m)
+func (m *Principal) XXX_DiscardUnknown() {
+	xxx_messageInfo_Principal.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_User proto.InternalMessageInfo
+var xxx_messageInfo_Principal proto.InternalMessageInfo
 
-func (m *User) GetMetadata() *weave.Metadata {
+func (m *Principal) GetMetadata() *weave.Metadata {
 	if m != nil {
 		return m.Metadata
 	}
 	return nil
 }
 
-func (m *User) GetName() string {
+func (m *Principal) GetName() string {
 	if m != nil {
 		return m.Name
 	}
 	return ""
 }
 
-func (m *User) GetSignature() []github_com_iov_one_weave.Address {
+func (m *Principal) GetDescription() string {
+	if m != nil {
+		return m.Description
+	}
+	return ""
+}
+
+func (m *Principal) GetSignatures() []*NamedSignature {
+	if m != nil {
+		return m.Signatures
+	}
+	return nil
+}
+
+type NamedSignature struct {
+	// Name is a human readable title for this signature.
+	Name        string                           `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Description string                           `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
+	Signature   github_com_iov_one_weave.Address `protobuf:"bytes,3,opt,name=signature,proto3,casttype=github.com/iov-one/weave.Address" json:"signature,omitempty"`
+}
+
+func (m *NamedSignature) Reset()         { *m = NamedSignature{} }
+func (m *NamedSignature) String() string { return proto.CompactTextString(m) }
+func (*NamedSignature) ProtoMessage()    {}
+func (*NamedSignature) Descriptor() ([]byte, []int) {
+	return fileDescriptor_3cb708fc58e15f81, []int{3}
+}
+func (m *NamedSignature) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *NamedSignature) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_NamedSignature.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *NamedSignature) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_NamedSignature.Merge(m, src)
+}
+func (m *NamedSignature) XXX_Size() int {
+	return m.Size()
+}
+func (m *NamedSignature) XXX_DiscardUnknown() {
+	xxx_messageInfo_NamedSignature.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_NamedSignature proto.InternalMessageInfo
+
+func (m *NamedSignature) GetName() string {
+	if m != nil {
+		return m.Name
+	}
+	return ""
+}
+
+func (m *NamedSignature) GetDescription() string {
+	if m != nil {
+		return m.Description
+	}
+	return ""
+}
+
+func (m *NamedSignature) GetSignature() github_com_iov_one_weave.Address {
 	if m != nil {
 		return m.Signature
 	}
@@ -224,33 +316,40 @@ func (m *User) GetSignature() []github_com_iov_one_weave.Address {
 func init() {
 	proto.RegisterType((*Role)(nil), "rbac.Role")
 	proto.RegisterType((*RoleBinding)(nil), "rbac.RoleBinding")
-	proto.RegisterType((*User)(nil), "rbac.User")
+	proto.RegisterType((*Principal)(nil), "rbac.Principal")
+	proto.RegisterType((*NamedSignature)(nil), "rbac.NamedSignature")
 }
 
 func init() { proto.RegisterFile("pkg/rbac/codec.proto", fileDescriptor_3cb708fc58e15f81) }
 
 var fileDescriptor_3cb708fc58e15f81 = []byte{
-	// 314 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0x12, 0x29, 0xc8, 0x4e, 0xd7,
-	0x2f, 0x4a, 0x4a, 0x4c, 0xd6, 0x4f, 0xce, 0x4f, 0x49, 0x4d, 0xd6, 0x2b, 0x28, 0xca, 0x2f, 0xc9,
-	0x17, 0x62, 0x01, 0x89, 0x48, 0x71, 0x23, 0x09, 0x49, 0x89, 0xa4, 0xe7, 0xa7, 0xe7, 0x83, 0x99,
-	0xfa, 0x20, 0x16, 0x44, 0x54, 0xe9, 0x1e, 0x23, 0x17, 0x4b, 0x50, 0x7e, 0x4e, 0xaa, 0x90, 0x36,
-	0x17, 0x47, 0x6e, 0x6a, 0x49, 0x62, 0x4a, 0x62, 0x49, 0xa2, 0x04, 0xa3, 0x02, 0xa3, 0x06, 0xb7,
-	0x11, 0xbf, 0x5e, 0x79, 0x6a, 0x62, 0x59, 0xaa, 0x9e, 0x2f, 0x54, 0x38, 0x08, 0xae, 0x40, 0x48,
-	0x88, 0x8b, 0x25, 0x2f, 0x31, 0x37, 0x55, 0x82, 0x49, 0x81, 0x51, 0x83, 0x33, 0x08, 0xcc, 0x16,
-	0xb2, 0xe3, 0x62, 0x4f, 0x4c, 0x49, 0x29, 0x4a, 0x2d, 0x2e, 0x96, 0x60, 0x56, 0x60, 0xd4, 0xe0,
-	0x71, 0x52, 0xf9, 0x75, 0x4f, 0x5e, 0x21, 0x3d, 0xb3, 0x24, 0xa3, 0x34, 0x49, 0x2f, 0x39, 0x3f,
-	0x57, 0x3f, 0x33, 0xbf, 0x4c, 0x37, 0x3f, 0x2f, 0x55, 0x1f, 0x62, 0xaa, 0x23, 0x44, 0x6d, 0x10,
-	0x4c, 0x93, 0x90, 0x24, 0x17, 0x47, 0x51, 0x7e, 0x4e, 0x6a, 0x7c, 0x66, 0x4a, 0xb1, 0x04, 0x8b,
-	0x02, 0xb3, 0x06, 0x4f, 0x10, 0x3b, 0x88, 0xef, 0x99, 0x52, 0x2c, 0x64, 0xc5, 0xc5, 0x9a, 0x5f,
-	0x9e, 0x97, 0x5a, 0x24, 0xc1, 0x46, 0x82, 0xc1, 0x10, 0x2d, 0x4a, 0xd3, 0x19, 0xb9, 0xb8, 0x41,
-	0x1e, 0x74, 0xca, 0xcc, 0x4b, 0xc9, 0xcc, 0x4b, 0x27, 0xcd, 0x9f, 0xe2, 0x5c, 0xec, 0x50, 0x37,
-	0x81, 0xbd, 0xca, 0x13, 0xc4, 0x06, 0x71, 0x92, 0x90, 0x13, 0x17, 0x67, 0x71, 0x66, 0x7a, 0x5e,
-	0x62, 0x49, 0x69, 0x51, 0x2a, 0x49, 0xde, 0x45, 0x68, 0x53, 0xea, 0x66, 0xe4, 0x62, 0x09, 0x2d,
-	0x4e, 0x2d, 0xa2, 0x3c, 0xe8, 0xd1, 0x5c, 0xc3, 0x4c, 0x86, 0x6b, 0x9c, 0x24, 0x4e, 0x3c, 0x92,
-	0x63, 0xbc, 0xf0, 0x48, 0x8e, 0xf1, 0xc1, 0x23, 0x39, 0xc6, 0x09, 0x8f, 0xe5, 0x18, 0x2e, 0x3c,
-	0x96, 0x63, 0xb8, 0xf1, 0x58, 0x8e, 0x21, 0x89, 0x0d, 0x9c, 0x52, 0x8c, 0x01, 0x01, 0x00, 0x00,
-	0xff, 0xff, 0xcc, 0x6d, 0x03, 0x00, 0x6a, 0x02, 0x00, 0x00,
+	// 407 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xbc, 0x53, 0xc1, 0x8a, 0xd4, 0x30,
+	0x18, 0x9e, 0x4c, 0xbb, 0xd3, 0xed, 0xdf, 0x61, 0x85, 0x30, 0x60, 0xdc, 0x43, 0xb7, 0x14, 0x0f,
+	0x05, 0xb1, 0x95, 0xd5, 0x93, 0x07, 0xc1, 0xde, 0x3c, 0x28, 0x4b, 0x7c, 0x00, 0xc9, 0x34, 0xa1,
+	0x06, 0xa7, 0x49, 0x49, 0xba, 0xbb, 0xef, 0xe0, 0xc9, 0x9b, 0x2f, 0xe0, 0x13, 0xf8, 0x14, 0x1e,
+	0xf7, 0xe8, 0x69, 0x91, 0x99, 0xb7, 0x98, 0x93, 0xb4, 0x9d, 0xa9, 0x15, 0x11, 0x1c, 0x90, 0xbd,
+	0xfd, 0xf9, 0xfe, 0xef, 0xcf, 0xc7, 0xf7, 0xfd, 0x09, 0x2c, 0xea, 0x0f, 0x65, 0x66, 0x96, 0xac,
+	0xc8, 0x0a, 0xcd, 0x45, 0x91, 0xd6, 0x46, 0x37, 0x1a, 0xbb, 0x2d, 0x72, 0x1a, 0x8c, 0xa0, 0xd3,
+	0x45, 0xa9, 0x4b, 0xdd, 0x95, 0x59, 0x5b, 0xf5, 0x68, 0xfc, 0x75, 0x0a, 0x2e, 0xd5, 0x2b, 0x81,
+	0x1f, 0xc1, 0x71, 0x25, 0x1a, 0xc6, 0x59, 0xc3, 0x08, 0x8a, 0x50, 0x12, 0x9c, 0xdf, 0x4b, 0xaf,
+	0x05, 0xbb, 0x12, 0xe9, 0xeb, 0x1d, 0x4c, 0x07, 0x02, 0xc6, 0xe0, 0x2a, 0x56, 0x09, 0x32, 0x8d,
+	0x50, 0xe2, 0xd3, 0xae, 0xc6, 0x11, 0x04, 0x5c, 0xd8, 0xc2, 0xc8, 0xba, 0x91, 0x5a, 0x11, 0xa7,
+	0x6b, 0x8d, 0x21, 0xfc, 0x02, 0x3c, 0xc6, 0xb9, 0x11, 0xd6, 0x12, 0x37, 0x42, 0xc9, 0x3c, 0x7f,
+	0xb8, 0xbd, 0x3d, 0x8b, 0x4a, 0xd9, 0xbc, 0xbf, 0x5c, 0xa6, 0x85, 0xae, 0x32, 0xa9, 0xaf, 0x1e,
+	0x6b, 0x25, 0xb2, 0x5e, 0xf7, 0x65, 0xcf, 0xa5, 0xfb, 0x21, 0xfc, 0x00, 0x8e, 0x8d, 0x5e, 0x89,
+	0x77, 0x92, 0x5b, 0x72, 0x14, 0x39, 0xc9, 0x9c, 0x7a, 0xed, 0xf9, 0x15, 0xb7, 0xf8, 0x39, 0x1c,
+	0xe9, 0x6b, 0x25, 0x0c, 0x99, 0x1d, 0x70, 0x71, 0x3f, 0x82, 0x9f, 0x40, 0x50, 0x0b, 0x53, 0x49,
+	0x6b, 0xa5, 0x56, 0x96, 0x78, 0x91, 0x93, 0xf8, 0xf9, 0xc9, 0xf6, 0xf6, 0x0c, 0x2e, 0x06, 0x98,
+	0x8e, 0x29, 0xf1, 0x67, 0x04, 0x41, 0x1b, 0x5a, 0x2e, 0x15, 0x97, 0xaa, 0x3c, 0x2c, 0xbb, 0xfb,
+	0xe0, 0xed, 0x5c, 0x74, 0xf1, 0xcd, 0xe9, 0xac, 0x37, 0x81, 0x73, 0xf0, 0xad, 0x2c, 0x15, 0x6b,
+	0x2e, 0x8d, 0xe8, 0xe2, 0xfb, 0x57, 0x1f, 0xbf, 0xc6, 0xe2, 0x2f, 0x08, 0xfc, 0x0b, 0x23, 0x55,
+	0x21, 0x6b, 0xb6, 0xba, 0x8b, 0x9d, 0x3e, 0x03, 0x18, 0xd4, 0xdb, 0xb5, 0x3a, 0x49, 0x70, 0xbe,
+	0x48, 0xdb, 0xd7, 0x97, 0xbe, 0x61, 0x95, 0xe0, 0x6f, 0xf7, 0x4d, 0x3a, 0xe2, 0xc5, 0x1f, 0x11,
+	0x9c, 0xfc, 0xde, 0x1e, 0xe4, 0xd1, 0xdf, 0xe5, 0xa7, 0x7f, 0xca, 0xff, 0x87, 0xcc, 0x72, 0xf2,
+	0x6d, 0x1d, 0xa2, 0x9b, 0x75, 0x88, 0x7e, 0xac, 0x43, 0xf4, 0x69, 0x13, 0x4e, 0x6e, 0x36, 0xe1,
+	0xe4, 0xfb, 0x26, 0x9c, 0x2c, 0x67, 0xdd, 0x1f, 0x79, 0xfa, 0x33, 0x00, 0x00, 0xff, 0xff, 0x8a,
+	0x57, 0xc0, 0x4e, 0x64, 0x03, 0x00, 0x00,
 }
 
 func (m *Role) Marshal() (dAtA []byte, err error) {
@@ -284,15 +383,21 @@ func (m *Role) MarshalTo(dAtA []byte) (int, error) {
 		i = encodeVarintCodec(dAtA, i, uint64(len(m.Name)))
 		i += copy(dAtA[i:], m.Name)
 	}
-	if len(m.Address) > 0 {
+	if len(m.Description) > 0 {
 		dAtA[i] = 0x1a
+		i++
+		i = encodeVarintCodec(dAtA, i, uint64(len(m.Description)))
+		i += copy(dAtA[i:], m.Description)
+	}
+	if len(m.Address) > 0 {
+		dAtA[i] = 0x22
 		i++
 		i = encodeVarintCodec(dAtA, i, uint64(len(m.Address)))
 		i += copy(dAtA[i:], m.Address)
 	}
 	if len(m.RoleIds) > 0 {
 		for _, b := range m.RoleIds {
-			dAtA[i] = 0x22
+			dAtA[i] = 0x2a
 			i++
 			i = encodeVarintCodec(dAtA, i, uint64(len(b)))
 			i += copy(dAtA[i:], b)
@@ -303,6 +408,21 @@ func (m *Role) MarshalTo(dAtA []byte) (int, error) {
 		i++
 		i = encodeVarintCodec(dAtA, i, uint64(len(m.Owner)))
 		i += copy(dAtA[i:], m.Owner)
+	}
+	if len(m.Permissions) > 0 {
+		for _, s := range m.Permissions {
+			dAtA[i] = 0x3a
+			i++
+			l = len(s)
+			for l >= 1<<7 {
+				dAtA[i] = uint8(uint64(l)&0x7f | 0x80)
+				l >>= 7
+				i++
+			}
+			dAtA[i] = uint8(l)
+			i++
+			i += copy(dAtA[i:], s)
+		}
 	}
 	return i, nil
 }
@@ -347,7 +467,7 @@ func (m *RoleBinding) MarshalTo(dAtA []byte) (int, error) {
 	return i, nil
 }
 
-func (m *User) Marshal() (dAtA []byte, err error) {
+func (m *Principal) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalTo(dAtA)
@@ -357,7 +477,7 @@ func (m *User) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *User) MarshalTo(dAtA []byte) (int, error) {
+func (m *Principal) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
@@ -378,13 +498,59 @@ func (m *User) MarshalTo(dAtA []byte) (int, error) {
 		i = encodeVarintCodec(dAtA, i, uint64(len(m.Name)))
 		i += copy(dAtA[i:], m.Name)
 	}
-	if len(m.Signature) > 0 {
-		for _, b := range m.Signature {
-			dAtA[i] = 0x1a
+	if len(m.Description) > 0 {
+		dAtA[i] = 0x1a
+		i++
+		i = encodeVarintCodec(dAtA, i, uint64(len(m.Description)))
+		i += copy(dAtA[i:], m.Description)
+	}
+	if len(m.Signatures) > 0 {
+		for _, msg := range m.Signatures {
+			dAtA[i] = 0x22
 			i++
-			i = encodeVarintCodec(dAtA, i, uint64(len(b)))
-			i += copy(dAtA[i:], b)
+			i = encodeVarintCodec(dAtA, i, uint64(msg.Size()))
+			n, err := msg.MarshalTo(dAtA[i:])
+			if err != nil {
+				return 0, err
+			}
+			i += n
 		}
+	}
+	return i, nil
+}
+
+func (m *NamedSignature) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *NamedSignature) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if len(m.Name) > 0 {
+		dAtA[i] = 0xa
+		i++
+		i = encodeVarintCodec(dAtA, i, uint64(len(m.Name)))
+		i += copy(dAtA[i:], m.Name)
+	}
+	if len(m.Description) > 0 {
+		dAtA[i] = 0x12
+		i++
+		i = encodeVarintCodec(dAtA, i, uint64(len(m.Description)))
+		i += copy(dAtA[i:], m.Description)
+	}
+	if len(m.Signature) > 0 {
+		dAtA[i] = 0x1a
+		i++
+		i = encodeVarintCodec(dAtA, i, uint64(len(m.Signature)))
+		i += copy(dAtA[i:], m.Signature)
 	}
 	return i, nil
 }
@@ -412,6 +578,10 @@ func (m *Role) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovCodec(uint64(l))
 	}
+	l = len(m.Description)
+	if l > 0 {
+		n += 1 + l + sovCodec(uint64(l))
+	}
 	l = len(m.Address)
 	if l > 0 {
 		n += 1 + l + sovCodec(uint64(l))
@@ -425,6 +595,12 @@ func (m *Role) Size() (n int) {
 	l = len(m.Owner)
 	if l > 0 {
 		n += 1 + l + sovCodec(uint64(l))
+	}
+	if len(m.Permissions) > 0 {
+		for _, s := range m.Permissions {
+			l = len(s)
+			n += 1 + l + sovCodec(uint64(l))
+		}
 	}
 	return n
 }
@@ -450,7 +626,7 @@ func (m *RoleBinding) Size() (n int) {
 	return n
 }
 
-func (m *User) Size() (n int) {
+func (m *Principal) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -464,11 +640,36 @@ func (m *User) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovCodec(uint64(l))
 	}
-	if len(m.Signature) > 0 {
-		for _, b := range m.Signature {
-			l = len(b)
+	l = len(m.Description)
+	if l > 0 {
+		n += 1 + l + sovCodec(uint64(l))
+	}
+	if len(m.Signatures) > 0 {
+		for _, e := range m.Signatures {
+			l = e.Size()
 			n += 1 + l + sovCodec(uint64(l))
 		}
+	}
+	return n
+}
+
+func (m *NamedSignature) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Name)
+	if l > 0 {
+		n += 1 + l + sovCodec(uint64(l))
+	}
+	l = len(m.Description)
+	if l > 0 {
+		n += 1 + l + sovCodec(uint64(l))
+	}
+	l = len(m.Signature)
+	if l > 0 {
+		n += 1 + l + sovCodec(uint64(l))
 	}
 	return n
 }
@@ -585,6 +786,38 @@ func (m *Role) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 3:
 			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Description", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCodec
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthCodec
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthCodec
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Description = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Address", wireType)
 			}
 			var byteLen int
@@ -617,7 +850,7 @@ func (m *Role) Unmarshal(dAtA []byte) error {
 				m.Address = []byte{}
 			}
 			iNdEx = postIndex
-		case 4:
+		case 5:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field RoleIds", wireType)
 			}
@@ -682,6 +915,38 @@ func (m *Role) Unmarshal(dAtA []byte) error {
 			if m.Owner == nil {
 				m.Owner = []byte{}
 			}
+			iNdEx = postIndex
+		case 7:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Permissions", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCodec
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthCodec
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthCodec
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Permissions = append(m.Permissions, Permission(dAtA[iNdEx:postIndex]))
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -864,7 +1129,7 @@ func (m *RoleBinding) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *User) Unmarshal(dAtA []byte) error {
+func (m *Principal) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -887,10 +1152,10 @@ func (m *User) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: User: wiretype end group for non-group")
+			return fmt.Errorf("proto: Principal: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: User: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: Principal: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -963,6 +1228,189 @@ func (m *User) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 3:
 			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Description", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCodec
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthCodec
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthCodec
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Description = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Signatures", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCodec
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthCodec
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthCodec
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Signatures = append(m.Signatures, &NamedSignature{})
+			if err := m.Signatures[len(m.Signatures)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipCodec(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthCodec
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthCodec
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *NamedSignature) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowCodec
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: NamedSignature: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: NamedSignature: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Name", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCodec
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthCodec
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthCodec
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Name = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Description", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowCodec
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthCodec
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthCodec
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Description = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Signature", wireType)
 			}
 			var byteLen int
@@ -990,8 +1438,10 @@ func (m *User) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Signature = append(m.Signature, make([]byte, postIndex-iNdEx))
-			copy(m.Signature[len(m.Signature)-1], dAtA[iNdEx:postIndex])
+			m.Signature = append(m.Signature[:0], dAtA[iNdEx:postIndex]...)
+			if m.Signature == nil {
+				m.Signature = []byte{}
+			}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex

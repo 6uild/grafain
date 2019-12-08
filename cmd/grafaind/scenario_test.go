@@ -197,11 +197,14 @@ func initGenesis(t *testing.T, filename string, alice weave.Address) {
 					"role_ids": []int{1},
 				},
 			},
-			"users": []dict{
+			"principals": []dict{
 				{
 					"name": "Alice",
-					"signatures": []weave.Address{
-						alice,
+					"signatures": []dict{
+						{
+							"name":      "all",
+							"signature": alice,
+						},
 					},
 				},
 			},

@@ -23,21 +23,20 @@ type (
 		Signature weave.Address `json:"signature"`
 	}
 
-	genesisUser struct {
-		Name       string          `json:"name"`
-		Signatures []weave.Address `json:"signatures"`
+	genesisPrincipal struct {
+		Name       string            `json:"name"`
+		Signatures []*NamedSignature `json:"signatures"`
 	}
 
 	GenesisRBAC struct {
 		Roles        []genesisRole        `json:"roles"`
-		Users        []genesisUser        `json:"users"`
+		Principals   []genesisPrincipal   `json:"principals"`
 		RoleBindings []genesisRoleBinding `json:"role_bindings"`
 	}
 )
 
 // FromGenesis will parse initial artifacts data from genesis and save it to the database
 func (Initializer) FromGenesis(opts weave.Options, params weave.GenesisParams, db weave.KVStore) error {
-
 	var genesis GenesisRBAC
 	if err := opts.ReadOptions("rbac", &genesis); err != nil {
 		return err
@@ -45,27 +44,25 @@ func (Initializer) FromGenesis(opts weave.Options, params weave.GenesisParams, d
 	if err := addRoles(db, genesis); err != nil {
 		return err
 	}
-
-	if err := addUsers(db, genesis); err != nil {
+	if err := addPrincipals(db, genesis); err != nil {
 		return err
 	}
 	if err := addRoleBindings(db, genesis); err != nil {
 		return err
 	}
-
 	return nil
 }
 
-func addUsers(db weave.KVStore, genesis GenesisRBAC) error {
-	bucket := NewUserBucket()
-	for i, v := range genesis.Users {
-		user := User{
-			Metadata:  &weave.Metadata{Schema: 1},
-			Name:      v.Name,
-			Signature: v.Signatures,
+func addPrincipals(db weave.KVStore, genesis GenesisRBAC) error {
+	bucket := NewPrincipalBucket()
+	for i, v := range genesis.Principals {
+		principal := Principal{
+			Metadata:   &weave.Metadata{Schema: 1},
+			Name:       v.Name,
+			Signatures: v.Signatures,
 		}
-		if _, err := bucket.Put(db, nil, &user); err != nil {
-			return errors.Wrapf(err, "cannot save #%d user", i)
+		if _, err := bucket.Put(db, nil, &principal); err != nil {
+			return errors.Wrapf(err, "cannot save #%d principal", i)
 		}
 	}
 	return nil
@@ -103,7 +100,7 @@ func addRoles(db weave.KVStore, genesis GenesisRBAC) error {
 func addRoleBindings(db weave.KVStore, genesis GenesisRBAC) error {
 	bucket := NewRoleBindingBucket()
 	roleBucket := NewRoleBucket()
-	userBucket := NewUserBucket()
+	principalBucket := NewPrincipalBucket()
 
 	for i, v := range genesis.RoleBindings {
 		roleIdKey := encodeIDKey(v.RoleID)
@@ -115,13 +112,13 @@ func addRoleBindings(db weave.KVStore, genesis GenesisRBAC) error {
 		if err := roleBucket.Has(db, roleIdKey); errors.ErrNotFound.Is(err) {
 			return errors.Wrapf(errors.ErrHuman, "Role dependency not exists: id %d required for binding # %d", v.RoleID, i)
 		}
-		var xxx []User
-		userIDs, err := userBucket.ByIndex(db, SignatureIndex, v.Signature, &xxx)
+		var xxx []Principal
+		principalIDs, err := principalBucket.ByIndex(db, SignatureIndex, v.Signature, &xxx)
 		if err != nil {
 			return err
 		}
-		if len(userIDs) == 0 {
-			return errors.Wrapf(errors.ErrHuman, "User dependency not exists: signature %q required for binding # %d", v.Signature.String(), i)
+		if len(principalIDs) == 0 {
+			return errors.Wrapf(errors.ErrHuman, "Principal dependency not exists: signature %q required for binding # %d", v.Signature.String(), i)
 
 		}
 		if _, err := bucket.Put(db, rb); err != nil {

@@ -26,19 +26,31 @@ func TestGenesisInitializer(t *testing.T) {
 					"role_ids":[ 1 ]
 				}
 			],
-			"users": [
+			"principals": [
 				{
 					"name": "Anton",
 					"signatures": [
-						"seq:test/anton/1",
-						"seq:test/anton/2"
+						{
+							"name": "first",
+							"signature": "seq:test/anton/1"
+						},
+						{
+							"name": "second",
+							"signature": "seq:test/anton/2"
+						}
 					]
 				},
 				{
 					"name": "Bert",
 					"signatures": [
-						"seq:test/bert/1",
-						"seq:test/bert/2"
+						{
+							"name": "first",
+							"signature": "seq:test/bert/1"
+						},
+						{
+							"name": "second",
+							"signature": "seq:test/bert/2"
+						}
 					]
 				}
 			],
@@ -89,16 +101,21 @@ func TestGenesisInitializer(t *testing.T) {
 	assert.Equal(t, RoleCondition(weavetest.SequenceID(1)).Address(), second.Owner)
 	assert.Equal(t, [][]byte{weavetest.SequenceID(1)}, second.RoleIds)
 
-	u := NewUserBucket()
-	var anton User
+	u := NewPrincipalBucket()
+	var anton Principal
 	if err := u.One(db, weavetest.SequenceID(1), &anton); err != nil {
-		t.Fatalf("cannot get first user from the database: %s", err)
+		t.Fatalf("cannot get first principal from the database: %s", err)
 	}
 	assert.Equal(t, "Anton", anton.Name)
+	assert.Equal(t, 2, len(anton.Signatures))
+	firstSig, _ := weave.ParseAddress("seq:test/anton/1")
+	secondSig, _ := weave.ParseAddress("seq:test/anton/2")
+	expSignatures := []*NamedSignature{{Name: "first", Signature: firstSig}, {Name: "second", Signature: secondSig}}
+	assert.Equal(t, expSignatures, anton.Signatures)
 	// todo
-	var bert User
+	var bert Principal
 	if err := u.One(db, weavetest.SequenceID(2), &bert); err != nil {
-		t.Fatalf("cannot get second user from the database: %s", err)
+		t.Fatalf("cannot get second principal from the database: %s", err)
 	}
 	assert.Equal(t, "Bert", bert.Name)
 }
