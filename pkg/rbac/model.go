@@ -12,11 +12,11 @@ func RoleCondition(id []byte) weave.Condition {
 	return weave.NewCondition("rbac", "role", id)
 }
 
-type Permission string
-
 const maxPermissionLength = 128
 
 var isPermission = regexp.MustCompile(`^[0-9a-z.\-_]{1,128}$`).MatchString
+
+type Permission string
 
 func (m Permission) Validate() error {
 	switch l := len(m); {

@@ -69,7 +69,13 @@ func NewRoleBindingBucket() *RoleBindingBucket {
 		Bucket: bucket,
 	}
 }
-func (b RoleBindingBucket) Put(db weave.KVStore, r RoleBinding) ([]byte, error) {
+
+func (b RoleBindingBucket) Create(db weave.KVStore, roleIdKey []byte, signature weave.Address) ([]byte, error) {
+	r := RoleBinding{
+		Metadata:  &weave.Metadata{Schema: 1},
+		RoleId:    roleIdKey,
+		Signature: signature,
+	}
 	key := buildKey(r)
 	return key, b.Bucket.Save(db, weaveORM.NewSimpleObj(key, &r))
 }
