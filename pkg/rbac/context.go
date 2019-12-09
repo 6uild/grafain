@@ -1,7 +1,9 @@
 package rbac
 
 import (
+	"bytes"
 	"context"
+	"sort"
 
 	"github.com/iov-one/weave"
 )
@@ -27,10 +29,16 @@ func withRBAC(ctx weave.Context, roleIDsToRoles map[string]Role) weave.Context {
 			perms[v] = struct{}{}
 		}
 	}
-
+	sortConditions(conds)
 	newCtx := context.WithValue(ctx, contextRBACConditions, conds)
 	newCtx = context.WithValue(newCtx, contextRBACPermissions, perms)
 	return newCtx
+}
+
+func sortConditions(conds []weave.Condition) {
+	sort.Slice(conds, func(i, j int) bool {
+		return bytes.Compare(conds[i], conds[j]) < 0
+	})
 }
 
 // Authenticate gets/sets permissions on the given context key
