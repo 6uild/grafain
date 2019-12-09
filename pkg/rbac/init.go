@@ -13,9 +13,10 @@ var _ weave.Initializer = (*Initializer)(nil)
 
 type (
 	genesisRole struct {
-		Name    string        `json:"name"`
-		RoleIDs []uint64      `json:"role_ids"`
-		Owner   weave.Address `json:"owner"`
+		Name        string        `json:"name"`
+		RoleIDs     []uint64      `json:"role_ids"`
+		Owner       weave.Address `json:"owner"`
+		Permissions []Permission  `json:"permissions"`
 	}
 
 	genesisRoleBinding struct {
@@ -84,11 +85,12 @@ func addRoles(db weave.KVStore, genesis GenesisRBAC) error {
 			roleIds[j] = idKey
 		}
 		role := Role{
-			Metadata: &weave.Metadata{Schema: 1},
-			Address:  RoleCondition(key).Address(),
-			RoleIds:  roleIds,
-			Name:     v.Name,
-			Owner:    v.Owner,
+			Metadata:    &weave.Metadata{Schema: 1},
+			Address:     RoleCondition(key).Address(),
+			RoleIds:     roleIds,
+			Name:        v.Name,
+			Owner:       v.Owner,
+			Permissions: v.Permissions,
 		}
 		if _, err := bucket.Put(db, key, &role); err != nil {
 			return errors.Wrapf(err, "cannot save #%d role", i)
@@ -112,8 +114,8 @@ func addRoleBindings(db weave.KVStore, genesis GenesisRBAC) error {
 		if err := roleBucket.Has(db, roleIdKey); errors.ErrNotFound.Is(err) {
 			return errors.Wrapf(errors.ErrHuman, "Role dependency not exists: id %d required for binding # %d", v.RoleID, i)
 		}
-		var xxx []Principal
-		principalIDs, err := principalBucket.ByIndex(db, SignatureIndex, v.Signature, &xxx)
+		var principals []Principal
+		principalIDs, err := principalBucket.ByIndex(db, SignatureIndex, v.Signature, &principals)
 		if err != nil {
 			return err
 		}

@@ -2,8 +2,10 @@ package rbac
 
 import (
 	"encoding/hex"
+	"strings"
 
 	"github.com/iov-one/weave"
+	"github.com/iov-one/weave/errors"
 	"github.com/iov-one/weave/orm"
 	"github.com/iov-one/weave/x"
 )
@@ -12,25 +14,24 @@ const (
 	roleParticipantGasCost = 10
 )
 
-type Decorator struct {
-	auth          x.Authenticator
+// AuthNDecorator handles authentication.
+type AuthNDecorator struct {
+	authN         x.Authenticator
 	roleBucket    orm.ModelBucket
 	roleBinBucket *RoleBindingBucket
 }
 
-var _ weave.Decorator = Decorator{}
-
-func NewDecorator(auth x.Authenticator) Decorator {
-	return Decorator{
-		auth:          auth,
+func NewAuthNDecorator(auth x.Authenticator) AuthNDecorator {
+	return AuthNDecorator{
+		authN:         auth,
 		roleBucket:    NewRoleBucket(),
 		roleBinBucket: NewRoleBindingBucket(),
 	}
 }
 
 // Check enforces roles added to the context before calling down the stack
-func (d Decorator) Check(ctx weave.Context, store weave.KVStore, tx weave.Tx, next weave.Checker) (*weave.CheckResult, error) {
-	newCtx, cost, err := d.authRoles(ctx, store, tx)
+func (d AuthNDecorator) Check(ctx weave.Context, store weave.KVStore, tx weave.Tx, next weave.Checker) (*weave.CheckResult, error) {
+	newCtx, cost, err := d.authRoles(ctx, store)
 	if err != nil {
 		return nil, err
 	}
@@ -44,8 +45,8 @@ func (d Decorator) Check(ctx weave.Context, store weave.KVStore, tx weave.Tx, ne
 }
 
 // Deliver enforces roles added to the context before calling down the stack
-func (d Decorator) Deliver(ctx weave.Context, store weave.KVStore, tx weave.Tx, next weave.Deliverer) (*weave.DeliverResult, error) {
-	newCtx, _, err := d.authRoles(ctx, store, tx)
+func (d AuthNDecorator) Deliver(ctx weave.Context, store weave.KVStore, tx weave.Tx, next weave.Deliverer) (*weave.DeliverResult, error) {
+	newCtx, _, err := d.authRoles(ctx, store)
 	if err != nil {
 		return nil, err
 	}
@@ -53,35 +54,29 @@ func (d Decorator) Deliver(ctx weave.Context, store weave.KVStore, tx weave.Tx, 
 	return next.Deliver(newCtx, store, tx)
 }
 
-func (d Decorator) authRoles(ctx weave.Context, db weave.KVStore, tx weave.Tx) (weave.Context, int64, error) {
-	roleIdsProcessed := make(map[string]struct{})
-	for _, c := range d.auth.GetConditions(ctx) {
+func (d AuthNDecorator) authRoles(ctx weave.Context, db weave.KVStore) (weave.Context, int64, error) {
+	var costs int64
+	roleIdsProcessed := make(map[string]Role)
+	for _, c := range d.authN.GetConditions(ctx) {
 		roleIDs, err := d.roleBinBucket.FindRoleIDsByAddress(db, c.Address())
 		if err != nil {
 			return ctx, 0, err
 		}
-		println("found roleIDs: ", hex.EncodeToString(roleIDs[0]))
 		for _, roleID := range roleIDs {
 			err := d.loadRoles(db, roleID, roleIdsProcessed)
 			if err != nil {
 				return ctx, 0, err
 			}
-		}
-	}
-	var costs int64
-	if len(roleIdsProcessed) != 0 {
-		conds := make([]weave.Condition, 0, len(roleIdsProcessed))
-		for id := range roleIdsProcessed {
-			conds = append(conds, RoleCondition([]byte(id)))
 			costs += roleParticipantGasCost
 		}
-		println("adding #conditions: ", len(conds))
-		ctx = withRBAC(ctx, conds)
+	}
+	if len(roleIdsProcessed) != 0 {
+		ctx = withRBAC(ctx, roleIdsProcessed)
 	}
 	return ctx, costs, nil
 }
 
-func (d Decorator) loadRoles(db weave.KVStore, roleID []byte, roleIdsProcessed map[string]struct{}) error {
+func (d AuthNDecorator) loadRoles(db weave.KVStore, roleID []byte, roleIdsProcessed map[string]Role) error {
 	if _, ok := roleIdsProcessed[string(roleID)]; ok {
 		return nil
 	}
@@ -90,7 +85,7 @@ func (d Decorator) loadRoles(db weave.KVStore, roleID []byte, roleIdsProcessed m
 		println("failed to load role with id: ", hex.EncodeToString(roleID))
 		return err
 	}
-	roleIdsProcessed[string(roleID)] = struct{}{}
+	roleIdsProcessed[string(roleID)] = r
 
 	for _, id := range r.RoleIds {
 		err := d.loadRoles(db, id, roleIdsProcessed)
@@ -99,4 +94,54 @@ func (d Decorator) loadRoles(db weave.KVStore, roleID []byte, roleIdsProcessed m
 		}
 	}
 	return nil
+}
+
+type Authorizator interface {
+	HasPermission(ctx weave.Context, p Permission) bool
+}
+
+// AuthZDecorator handles authorization
+type AuthZDecorator struct {
+	authZ            Authorizator
+	permissionPrefix string
+}
+
+func NewAuthZDecorator(auth Authorizator, permissionPrefix string) AuthZDecorator {
+	return AuthZDecorator{
+		authZ:            auth,
+		permissionPrefix: permissionPrefix,
+	}
+}
+
+// Check enforces permissions for the message stored in the context before calling down the stack
+func (d AuthZDecorator) Check(ctx weave.Context, store weave.KVStore, tx weave.Tx, next weave.Checker) (*weave.CheckResult, error) {
+	msg, err := tx.GetMsg()
+	if err != nil {
+		return nil, err
+	}
+	perm := d.resolvePermission(msg)
+	if !d.authZ.HasPermission(ctx, perm) {
+		return nil, errors.Wrap(errors.ErrUnauthorized, "insufficient permissions")
+	}
+	return next.Check(ctx, store, tx)
+}
+
+// Deliver enforces permissions for the message stored in the context before calling down the stack
+func (d AuthZDecorator) Deliver(ctx weave.Context, store weave.KVStore, tx weave.Tx, next weave.Deliverer) (*weave.DeliverResult, error) {
+	msg, err := tx.GetMsg()
+	if err != nil {
+		return nil, err
+	}
+	perm := d.resolvePermission(msg)
+
+	if !d.authZ.HasPermission(ctx, perm) {
+		return nil, errors.Wrap(errors.ErrUnauthorized, "insufficient permissions")
+	}
+	return next.Deliver(ctx, store, tx)
+}
+
+func (d AuthZDecorator) resolvePermission(msg weave.Msg) Permission {
+	path := msg.Path()
+	normalizedPath := strings.ToLower(strings.ReplaceAll(path, "/", "."))
+	return Permission(strings.Join([]string{d.permissionPrefix, normalizedPath}, "."))
 }

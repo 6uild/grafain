@@ -42,6 +42,8 @@ func Authenticator() x.Authenticator {
 	return x.ChainAuth(sigs.Authenticate{}, multisig.Authenticate{}, rbac.Authenticate{})
 }
 
+const GrafainPermissionPrefix = "_grafain"
+
 // Chain returns a chain of decorators, to handle authentication,
 // fees, logging, and recovery
 func Chain(authFn x.Authenticator, minFee coin.Coin) app.Decorators {
@@ -57,7 +59,8 @@ func Chain(authFn x.Authenticator, minFee coin.Coin) app.Decorators {
 		utils.NewSavepoint().OnCheck(),
 		sigs.NewDecorator(),
 		multisig.NewDecorator(authFn),
-		rbac.NewDecorator(authFn),
+		rbac.NewAuthNDecorator(authFn),
+		rbac.NewAuthZDecorator(rbac.Authorize{}, GrafainPermissionPrefix),
 		// cash.NewDynamicFeeDecorator embeds utils.NewSavepoint().OnDeliver()
 		cash.NewDynamicFeeDecorator(authFn, ctrl),
 		msgfee.NewAntispamFeeDecorator(minFee),
@@ -182,7 +185,7 @@ func CommitKVStore(dbPath string) (weave.CommitKVStore, error) {
 	// Expand the path fully
 	path, err := filepath.Abs(dbPath)
 	if err != nil {
-		return nil, fmt.Errorf("Invalid Database Name: %s", path)
+		return nil, fmt.Errorf("invalid Database Name: %s", path)
 	}
 
 	// Some external calls accidently add a ".db", which is now removed

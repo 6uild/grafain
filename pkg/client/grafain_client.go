@@ -31,6 +31,17 @@ func (c Client) CreateArtifact(owner weave.Address, image, checksum string) *gra
 	}
 	return tx
 }
+func (c Client) DeleteArtifact(image string) *grafain.Tx {
+	tx := &grafain.Tx{
+		Sum: &grafain.Tx_DeleteArtifactMsg{
+			DeleteArtifactMsg: &artifact.DeleteArtifactMsg{
+				Metadata: &weave.Metadata{Schema: 1},
+				Image:    artifact.Image(image),
+			},
+		},
+	}
+	return tx
+}
 
 // SignTx modifies the tx in-place, adding signatures
 func SignTx(tx *grafain.Tx, signer *crypto.PrivateKey, chainID string, nonce int64) error {

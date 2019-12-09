@@ -143,6 +143,15 @@ func TestEndToEndScenario(t *testing.T) {
 	data = hookClient.Query(podJson("any/unknown:image"))
 	assert.Equal(t, false, data.Response.Allowed)
 	assert.Equal(t, 404, data.Response.Status.Code)
+
+	// and when delete
+	tx = gClient.DeleteArtifact("foo/bar:v0.0.1")
+	seq, err = nonce.Next()
+	assert.Nil(t, err)
+	err = client.SignTx(tx, aliceKey, tmConf.ChainID(), seq)
+	assert.Nil(t, err)
+	rsp = gClient.BroadcastTxSync(tx, time.Second)
+	assert.Nil(t, rsp.IsError())
 }
 
 func awaitTendermitUp(t *testing.T, tmConf *config.Config, err error, node *node.Node) {
@@ -190,11 +199,17 @@ func initGenesis(t *testing.T, filename string, alice weave.Address) {
 				{
 					"name":  "system.admin",
 					"owner": "seq:rbac/role/1",
+					"permissions": []string{
+						"_grafain.artifacts.delete",
+					},
 				},
 				{
-					"name":     "k8s.devop",
+					"name":     "k8s.devops",
 					"owner":    "seq:rbac/role/1",
 					"role_ids": []int{1},
+					"permissions": []string{
+						"_grafain.artifacts.create",
+					},
 				},
 			},
 			"principals": []dict{
@@ -202,7 +217,7 @@ func initGenesis(t *testing.T, filename string, alice weave.Address) {
 					"name": "Alice",
 					"signatures": []dict{
 						{
-							"name":      "all",
+							"name":      "test",
 							"signature": alice,
 						},
 					},

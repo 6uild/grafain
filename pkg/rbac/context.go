@@ -4,33 +4,42 @@ import (
 	"context"
 
 	"github.com/iov-one/weave"
-	"github.com/iov-one/weave/x"
 )
 
 type contextKey int // local to the rbac module
 
 const (
-	contextRBAC contextKey = iota
+	contextRBACConditions  contextKey = iota
+	contextRBACPermissions contextKey = iota
 )
 
-func withRBAC(ctx weave.Context, conds []weave.Condition) weave.Context {
-	val, _ := ctx.Value(contextRBAC).([]weave.Condition)
-	if val == nil {
-		return context.WithValue(ctx, contextRBAC, conds)
+// withRBAC creates a new context from parent context with Roles conditions and permissions added.
+func withRBAC(ctx weave.Context, roleIDsToRoles map[string]Role) weave.Context {
+	conds, _ := ctx.Value(contextRBACConditions).([]weave.Condition)
+	perms, _ := ctx.Value(contextRBACPermissions).(map[Permission]struct{})
+	if perms == nil {
+		perms = make(map[Permission]struct{})
 	}
 
-	return context.WithValue(ctx, contextRBAC, append(val, conds...))
+	for id, role := range roleIDsToRoles {
+		conds = append(conds, RoleCondition([]byte(id)))
+		for _, v := range role.Permissions {
+			perms[v] = struct{}{}
+		}
+	}
+
+	newCtx := context.WithValue(ctx, contextRBACConditions, conds)
+	newCtx = context.WithValue(newCtx, contextRBACPermissions, perms)
+	return newCtx
 }
 
 // Authenticate gets/sets permissions on the given context key
 type Authenticate struct {
 }
 
-var _ x.Authenticator = Authenticate{}
-
 // GetConditions returns permissions previously set on this context
 func (a Authenticate) GetConditions(ctx weave.Context) []weave.Condition {
-	val, _ := ctx.Value(contextRBAC).([]weave.Condition)
+	val, _ := ctx.Value(contextRBACConditions).([]weave.Condition)
 	if val == nil {
 		return nil
 	}
@@ -45,4 +54,16 @@ func (a Authenticate) HasAddress(ctx weave.Context, addr weave.Address) bool {
 		}
 	}
 	return false
+}
+
+type Authorize struct{}
+
+// HasPermission for authorization
+func (Authorize) HasPermission(ctx weave.Context, p Permission) bool {
+	val, _ := ctx.Value(contextRBACPermissions).(map[Permission]struct{})
+	if val == nil {
+		return false
+	}
+	_, ok := val[p]
+	return ok
 }
