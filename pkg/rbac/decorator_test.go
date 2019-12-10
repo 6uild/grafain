@@ -21,11 +21,15 @@ func TestAuthNDecorator(t *testing.T) {
 	migration.MustInitPkg(db, PackageName)
 
 	myRole := Role{
+		Owner:       alice.Address(),
+		Address:     RoleCondition(weavetest.SequenceID(1)).Address(),
 		Metadata:    &weave.Metadata{Schema: 1},
 		Name:        "my",
 		Permissions: []Permission{"foo", "bar"},
 	}
 	myExtdRole := Role{
+		Owner:       alice.Address(),
+		Address:     RoleCondition(weavetest.SequenceID(1)).Address(),
 		Metadata:    &weave.Metadata{Schema: 1},
 		Name:        "my extended Role",
 		RoleIds:     [][]byte{weavetest.SequenceID(1)},
@@ -100,56 +104,35 @@ func TestAuthNDecorator(t *testing.T) {
 		})
 	}
 }
-func TestAuthZDecorator(t *testing.T) {
-	alice := weavetest.NewCondition()
-	bert := weavetest.NewCondition()
-	anyBody := weavetest.NewCondition()
 
+func TestAuthZDecorator(t *testing.T) {
 	db := store.MemStore()
 	migration.MustInitPkg(db, PackageName)
-
-	myRole := Role{
-		Metadata:    &weave.Metadata{Schema: 1},
-		Name:        "my",
-		Permissions: []Permission{"foo", "bar"},
-	}
-	myExtdRole := Role{
-		Metadata:    &weave.Metadata{Schema: 1},
-		Name:        "my extended Role",
-		RoleIds:     [][]byte{weavetest.SequenceID(1)},
-		Permissions: []Permission{"extended"},
-	}
-
-	roleBucket := NewRoleBucket()
-	bindBucket := NewRoleBindingBucket()
-	myRoleID, err := roleBucket.Put(db, nil, &myRole)
-	assert.Nil(t, err)
-	myExtRoleID, err := roleBucket.Put(db, nil, &myExtdRole)
-	assert.Nil(t, err)
-
-	_, err = bindBucket.Create(db, myRoleID, alice.Address())
-	_, err = bindBucket.Create(db, myExtRoleID, bert.Address())
-	assert.Nil(t, err)
+	any := weavetest.NewCondition().Address()
 
 	specs := map[string]struct {
-		signer         weave.Condition
-		expCheckErr    *errors.Error
-		expDeliverErr  *errors.Error
-		expPermissions []Permission
-		expConds       []weave.Condition
+		expCheckErr   *errors.Error
+		expDeliverErr *errors.Error
+		srcRoles      map[string]Role
 	}{
 		"happy path with single role": {
-			signer:         alice,
-			expPermissions: []Permission{"foo", "bar"},
-			expConds:       []weave.Condition{RoleCondition(myRoleID)},
+			srcRoles: map[string]Role{
+				"test": {Permissions: []Permission{"_test.authz"}, Owner: any, Address: any},
+			},
 		},
-		"happy path with embedded role": {
-			signer:         bert,
-			expPermissions: []Permission{"extended", "foo", "bar"},
-			expConds:       []weave.Condition{RoleCondition(myExtRoleID), RoleCondition(myRoleID)},
+		"happy path with multiple roles": {
+			srcRoles: map[string]Role{
+				"test1": {Permissions: []Permission{"_test.foo"}, Owner: any, Address: any},
+				"test2": {Permissions: []Permission{"_test.bar"}, Owner: any, Address: any},
+				"test3": {Permissions: []Permission{"_test.authz"}, Owner: any, Address: any},
+			},
 		},
-		"no role": {
-			signer: anyBody,
+		"without permission should be rejected": {
+			srcRoles: map[string]Role{
+				"test1": {Permissions: []Permission{"_test.foo"}},
+			},
+			expCheckErr:   errors.ErrUnauthorized,
+			expDeliverErr: errors.ErrUnauthorized,
 		},
 	}
 
@@ -157,34 +140,28 @@ func TestAuthZDecorator(t *testing.T) {
 
 	for msg, spec := range specs {
 		t.Run(msg, func(t *testing.T) {
-
-			auth := &weavetest.Auth{Signers: []weave.Condition{spec.signer}}
-			decorator := NewAuthNDecorator(auth)
-
-			anyTx := &weavetest.Tx{}
+			decorator := NewAuthZDecorator(&Authorize{}, "_test")
+			myTx := &weavetest.Tx{Msg: &weavetest.Msg{RoutePath: "authz"}}
 			var hn mockHandler
 			stack := weavetest.Decorate(&hn, decorator)
 
-			if _, err := stack.Check(context.TODO(), cache, anyTx); !spec.expCheckErr.Is(err) {
+			ctx := withRBAC(context.TODO(), spec.srcRoles)
+			if _, err := stack.Check(ctx, cache, myTx); !spec.expCheckErr.Is(err) {
 				t.Fatalf("check expected: %+v  but got %+v", spec.expCheckErr, err)
 			}
 			if spec.expCheckErr == nil {
 				assert.Equal(t, 1, hn.CheckCallCount())
-				// and verify all role conditions are set
-				verifyContext(t, hn.ctx, spec.expPermissions, spec.expConds)
 			}
 
 			cache.Discard()
-			hn.ctx = nil
-			if _, err := stack.Deliver(context.TODO(), cache, anyTx); !spec.expDeliverErr.Is(err) {
+			if _, err := stack.Deliver(ctx, cache, myTx); !spec.expDeliverErr.Is(err) {
 				t.Fatalf("check expected: %+v  but got %+v", spec.expDeliverErr, err)
 			}
-			if spec.expDeliverErr != nil {
+			if spec.expCheckErr != nil {
 				return
 			}
+
 			assert.Equal(t, 1, hn.DeliverCallCount())
-			// and verify all role conditions are set
-			verifyContext(t, hn.ctx, spec.expPermissions, spec.expConds)
 		})
 	}
 }

@@ -30,8 +30,25 @@ func (m Permission) Validate() error {
 	return nil
 }
 
+type Permissions []Permission
+
+func (m Permissions) Validate() error {
+	var errs error
+	for _, p := range m {
+		errors.Append(errs, errors.Wrapf(p.Validate(), "permission %q", p))
+	}
+	return errs
+}
+
 func (m *Role) Validate() error {
-	return nil
+	var errs error
+	errs = errors.AppendField(errs, "metadata", m.Metadata.Validate())
+	// todo: name
+	// todo: description
+	errs = errors.AppendField(errs, "address", m.Address.Validate())
+	// todo: roleIDs
+	errs = errors.AppendField(errs, "owner", m.Owner.Validate())
+	return errors.AppendField(errs, "permissions", Permissions(m.Permissions).Validate())
 }
 
 func (m *Role) Copy() orm.CloneableData {

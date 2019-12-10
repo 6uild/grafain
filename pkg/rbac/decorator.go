@@ -1,7 +1,6 @@
 package rbac
 
 import (
-	"encoding/hex"
 	"strings"
 
 	"github.com/iov-one/weave"
@@ -82,7 +81,6 @@ func (d AuthNDecorator) loadRoles(db weave.KVStore, roleID []byte, roleIdsProces
 	}
 	var r Role
 	if err := d.roleBucket.One(db, roleID, &r); err != nil {
-		println("failed to load role with id: ", hex.EncodeToString(roleID))
 		return err
 	}
 	roleIdsProcessed[string(roleID)] = r
