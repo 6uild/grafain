@@ -15,7 +15,7 @@ const SignatureIndex = "signature"
 
 const PackageName = "rbac"
 
-var roleSeq = weaveORM.NewSequence("contracts", "id")
+var roleSeq = weaveORM.NewSequence("role", "id")
 
 type RoleBucket struct {
 	weaveORM.ModelBucket
@@ -92,7 +92,13 @@ func (b RoleBindingBucket) FindRoleIDsByAddress(db weave.KVStore, a weave.Addres
 	}
 	return r, nil
 }
+func (mb *RoleBindingBucket) Register(name string, r weave.QueryRouter) {
+	mb.Bucket.Register(name, r)
+}
 
 func buildKey(roleBinding RoleBinding) []byte {
-	return append(roleBinding.Signature, roleBinding.RoleId...)
+	x := make([]byte, weave.AddressLength+8)
+	copy(x, roleBinding.Signature)
+	copy(x[weave.AddressLength:], roleBinding.RoleId)
+	return x
 }

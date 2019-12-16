@@ -116,6 +116,7 @@ func QueryRouter(minFee coin.Coin) weave.QueryRouter {
 		gov.RegisterQuery,
 		artifact.RegisterQuery,
 		cron.RegisterQuery,
+		rbac.RegisterQuery,
 	)
 	return r
 }

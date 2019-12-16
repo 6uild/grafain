@@ -16,6 +16,7 @@ import (
 	grafain "github.com/alpe/grafain/pkg/app"
 	"github.com/alpe/grafain/pkg/artifact"
 	"github.com/alpe/grafain/pkg/client"
+	"github.com/alpe/grafain/pkg/rbac"
 	"github.com/iov-one/weave"
 	weaveclient "github.com/iov-one/weave/client"
 	"github.com/iov-one/weave/orm"
@@ -185,6 +186,26 @@ var queries = map[string]struct {
 		decKey: sequenceKey,
 		encID:  numericID,
 	},
+	"/rbac/roles": {
+		newObj: func() model { return &rbac.Role{} },
+		decKey: sequenceKey,
+		encID:  numericID,
+	},
+	"/rbac/rolebindings": {
+		newObj: func() model { return &rbac.RoleBinding{} },
+		decKey: roleBindingKey,
+		encID:  addressID,
+	},
+	"/rbac/principals": {
+		newObj: func() model { return &rbac.Principal{} },
+		decKey: sequenceKey,
+		encID:  numericID,
+	},
+	"/rbac/principals/signature": {
+		newObj: func() model { return &rbac.Principal{} },
+		decKey: sequenceKey,
+		encID:  addressID,
+	},
 }
 
 // model is an entity used by weave to store data. This interface is
@@ -252,7 +273,7 @@ func plainID(plain string) ([]byte, error) {
 
 func refKey(raw []byte) (string, error) {
 	// Skip the prefix, being the characters before : (including separator)
-	val := raw[bytes.Index(raw, []byte(":"))+1:]
+	val := withoutDBPrefix(raw)
 
 	ref, err := orm.UnmarshalVersionedID(val)
 	if err != nil {
@@ -265,7 +286,7 @@ func refKey(raw []byte) (string, error) {
 
 func sequenceKey(raw []byte) (string, error) {
 	// Skip the prefix, being the characters before : (including separator)
-	seq := raw[bytes.Index(raw, []byte(":"))+1:]
+	seq := withoutDBPrefix(raw)
 	if len(seq) != 8 {
 		return "", fmt.Errorf("invalid sequence length: %d", len(seq))
 	}
@@ -274,11 +295,24 @@ func sequenceKey(raw []byte) (string, error) {
 }
 
 func hexKey(raw []byte) (string, error) {
-	return hex.EncodeToString(raw), nil
+	return hex.EncodeToString(withoutDBPrefix(raw)), nil
 }
 
 func stringKey(raw []byte) (string, error) {
-	return string(raw), nil
+	return string(withoutDBPrefix(raw)), nil
+}
+func roleBindingKey(raw []byte) (string, error) {
+	val := withoutDBPrefix(raw)
+	if len(val) != weave.AddressLength+8 {
+		return "", fmt.Errorf("invalid role binding key length: %d", len(raw))
+	}
+	addr := weave.Address(val[0:weave.AddressLength])
+	roleID := binary.BigEndian.Uint64(val[weave.AddressLength:])
+	return fmt.Sprintf("%s/%d", addr, roleID), nil
+}
+
+func withoutDBPrefix(raw []byte) []byte {
+	return raw[bytes.Index(raw, []byte(":"))+1:]
 }
 
 // extendedProposal is the gov.Proposal with an additional field to extract

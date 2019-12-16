@@ -68,6 +68,42 @@ data:
           ]
         }
         ],
+        "rbac": {
+          "roles": [
+            {
+              "name": "system.admin",
+              "owner": "seq:rbac/role/1",
+              "permissions": [
+                "_grafain.artifacts.delete"
+              ]
+            },
+            {
+              "name": "k8s.devops",
+              "owner": "seq:rbac/role/1",
+              "role_ids": [ 1 ],
+              "permissions": [
+                "_grafain.artifacts.create"
+              ]
+            }
+          ],
+          "principals": [
+            {
+              "name": "Alice",
+              "signatures": [
+                {
+                  "name": "test",
+                  "signature": "0E95C039EF14EE329D0E09D84F909CF9EB5EF472"
+                }
+              ]
+            }
+          ],
+          "role_bindings": [
+            {
+              "role_id": 2,
+              "signature": "0E95C039EF14EE329D0E09D84F909CF9EB5EF472"
+            }
+          ]
+        },
         "update_validators": {
           "addresses": [
             "cond:multisig/usage/0000000000000001"
@@ -85,7 +121,7 @@ data:
           },
           "msgfee": {
             "owner": "cond:multisig/usage/0000000000000001",
-            "fee_admin": "cond:multisig/usage/0000000000000001",
+            "fee_admin": "cond:multisig/usage/0000000000000001"
           }
         },
         "msgfee": [],

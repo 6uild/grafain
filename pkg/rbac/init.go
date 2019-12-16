@@ -72,10 +72,6 @@ func addPrincipals(db weave.KVStore, genesis GenesisRBAC) error {
 func addRoles(db weave.KVStore, genesis GenesisRBAC) error {
 	bucket := NewRoleBucket()
 	for i, v := range genesis.Roles {
-		key, err := roleSeq.NextVal(db)
-		if err != nil {
-			return errors.Wrap(err, "cannot acquire ID")
-		}
 		roleIds := make([][]byte, len(v.RoleIDs))
 		for j, id := range v.RoleIDs {
 			idKey := encodeIDKey(id)
@@ -83,6 +79,10 @@ func addRoles(db weave.KVStore, genesis GenesisRBAC) error {
 				return errors.Wrapf(errors.ErrHuman, "Role dependency not exists: id %d required for %q", id, v.Name)
 			}
 			roleIds[j] = idKey
+		}
+		key, err := roleSeq.NextVal(db)
+		if err != nil {
+			return errors.Wrap(err, "cannot acquire ID")
 		}
 		role := Role{
 			Metadata:    &weave.Metadata{Schema: 1},
