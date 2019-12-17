@@ -43,16 +43,6 @@ func (c Client) DeleteArtifact(image string) *grafain.Tx {
 	return tx
 }
 
-// SignTx modifies the tx in-place, adding signatures
-func SignTx(tx *grafain.Tx, signer *crypto.PrivateKey, chainID string, nonce int64) error {
-	sig, err := sigs.SignTx(signer, tx, chainID, nonce)
-	if err != nil {
-		return err
-	}
-	tx.Signatures = append(tx.Signatures, sig)
-	return nil
-}
-
 func (c Client) GetArtifactsByChecksum(checksum string) ([]*artifact.Artifact, error) {
 	resp, err := c.AbciQuery("/artifacts/checksum", []byte(checksum))
 	if err != nil {
@@ -99,4 +89,19 @@ func (c Client) ListArtifact() ([]artifact.Artifact, error) {
 		out[i] = x
 	}
 	return out, nil
+}
+
+// SignTx modifies the tx in-place, adding signatures
+func SignTx(tx *grafain.Tx, signer crypto.Signer, chainID string, nonce int64) error {
+	sig, err := sigs.SignTx(signer, tx, chainID, nonce)
+	if err != nil {
+		return err
+	}
+	tx.Signatures = append(tx.Signatures, sig)
+	return nil
+}
+
+// AddMultiSig modifies the tx in-place, adding a multiSig ID
+func AddMultiSig(tx *grafain.Tx, multiSigID []byte) {
+	tx.Multisig = append(tx.Multisig, multiSigID)
 }

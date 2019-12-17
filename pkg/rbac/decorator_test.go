@@ -67,6 +67,7 @@ func TestAuthNDecorator(t *testing.T) {
 		"no role": {
 			signer: anyBody,
 		},
+		// TODO: make it work with a multisig: https://github.com/6uild/grafain/pull/27#discussion_r358288703
 	}
 
 	cache := db.CacheWrap()

@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -20,6 +21,7 @@ import (
 	weaveclient "github.com/iov-one/weave/client"
 	"github.com/iov-one/weave/commands/server"
 	"github.com/iov-one/weave/crypto"
+	"github.com/iov-one/weave/weavetest"
 	"github.com/iov-one/weave/weavetest/assert"
 	"github.com/iov-one/weave/x/cash"
 	"github.com/tendermint/tendermint/config"
@@ -48,6 +50,7 @@ func parsePrivateKey(t *testing.T) *crypto.PrivateKey {
 // * Create an artifact
 // * Query it via abci
 // * Query it via admission hook
+// * Delete artifact
 func TestEndToEndScenario(t *testing.T) {
 	logger := log.NewTMLogger(log.NewSyncWriter(os.Stdout))
 	logger = log.NewFilter(logger, log.AllowError())
@@ -58,7 +61,9 @@ func TestEndToEndScenario(t *testing.T) {
 	// configure and start tendermint node with grafain abci
 	tmConf := testsupport.BuildTendermintConfig(t, "scenario")
 	tmConf.Moniker = "ScenarioTest"
-	initGenesis(t, tmConf.GenesisFile(), alice)
+	anyAddress := weave.Address(make([]byte, weave.AddressLength))
+
+	initGenesis(t, tmConf.GenesisFile(), alice, anyAddress)
 
 	abciApp, err := grafain.GenerateApp(&server.Options{
 		Home:   tmConf.RootDir,
@@ -70,7 +75,124 @@ func TestEndToEndScenario(t *testing.T) {
 	node := testsupport.NewTendermint(t, tmConf, abciApp, logger.With("module", "tendermint"))
 	assert.Nil(t, node.Start())
 	defer node.Stop()
+	chainID := tmConf.ChainID()
 
+	hookRuntime := StartHook(t, node, tmConf)
+
+	awaitTendermitUp(t, tmConf, err, node)
+	AwaitHookUp(t, hookRuntime)
+
+	// now start testing grafain via abci operations
+	gClient := client.NewClient(rpcclient.NewLocal(node))
+
+	// create artifact should succeed
+	adminGroupAddress, err := weave.ParseAddress("seq:rbac/role/1")
+	assert.Nil(t, err)
+	tx := gClient.CreateArtifact(adminGroupAddress, "foo/bar:v0.0.1", "myChecksum")
+	nonce := client.NewNonce(gClient, alice)
+	seq, err := nonce.Next()
+	assert.Nil(t, err)
+	err = client.SignTx(tx, aliceKey, chainID, seq)
+	assert.Nil(t, err)
+	rsp := gClient.BroadcastTxSync(tx, time.Second)
+	assert.Nil(t, rsp.IsError())
+
+	// then get and list artifact should succeed
+	a, err := gClient.GetArtifactByImage(rsp.Response.DeliverTx.Data)
+	assert.Nil(t, err)
+	assert.Equal(t, "myChecksum", a.Checksum)
+	assert.Equal(t, adminGroupAddress, a.Owner)
+	assert.Nil(t, err)
+
+	all, err := gClient.ListArtifact()
+	assert.Nil(t, err)
+
+	if len(all) == 0 {
+		t.Fatal("Expected non empty result")
+	}
+	// and when call to admission web hook with a known image
+	hookClient := testsupport.NewAdmissionClient(t, hookRuntime.CertDir, hookRuntime.HookAddress, hookRuntime.AdmissionPath)
+	content := podJson("foo/bar:v0.0.1")
+	data := hookClient.Query(content)
+	assert.Equal(t, true, data.Response.Allowed)
+	assert.Equal(t, 200, data.Response.Status.Code)
+	// and a genesis image
+	content = podJson("alpetest/grafain:vx.y.z")
+	data = hookClient.Query(content)
+	assert.Equal(t, true, data.Response.Allowed)
+	assert.Equal(t, 200, data.Response.Status.Code)
+
+	// and with an unknown image
+	data = hookClient.Query(podJson("any/unknown:image"))
+	assert.Equal(t, false, data.Response.Allowed)
+	assert.Equal(t, 404, data.Response.Status.Code)
+
+	// and when delete
+	tx = gClient.DeleteArtifact("foo/bar:v0.0.1")
+	seq, err = nonce.Next()
+	assert.Nil(t, err)
+	err = client.SignTx(tx, aliceKey, chainID, seq)
+	assert.Nil(t, err)
+	rsp = gClient.BroadcastTxSync(tx, time.Second)
+	assert.Nil(t, rsp.IsError())
+}
+
+func TestMultiSigScenario(t *testing.T) {
+	logger := log.NewTMLogger(log.NewSyncWriter(os.Stdout))
+	logger = log.NewFilter(logger, log.AllowError())
+
+	anyAddress := weave.Address(make([]byte, weave.AddressLength))
+
+	bertKey := weavetest.NewKey()
+	bert := bertKey.PublicKey().Address()
+
+	// configure and start tendermint node with grafain abci
+	tmConf := testsupport.BuildTendermintConfig(t, "scenario")
+	tmConf.Moniker = "ScenarioTest"
+
+	initGenesis(t, tmConf.GenesisFile(), anyAddress, bert)
+
+	abciApp, err := grafain.GenerateApp(&server.Options{
+		Home:   tmConf.RootDir,
+		Logger: logger,
+		Debug:  true,
+	})
+	assert.Nil(t, err)
+
+	node := testsupport.NewTendermint(t, tmConf, abciApp, logger.With("module", "tendermint"))
+	assert.Nil(t, node.Start())
+	defer node.Stop()
+	chainID := tmConf.ChainID()
+	awaitTendermitUp(t, tmConf, err, node)
+
+	gClient := client.NewClient(rpcclient.NewLocal(node))
+	nonce := client.NewNonce(gClient, bert)
+	seq, err := nonce.Next()
+	assert.Nil(t, err)
+	// when delete an image with signer authN
+	tx := gClient.DeleteArtifact("alpetest/grafain:vx.y.z")
+	err = client.SignTx(tx, bertKey, chainID, seq)
+	assert.Nil(t, err)
+	rsp := gClient.BroadcastTxSync(tx, time.Second)
+	// then it should fail
+	assert.Equal(t, true, strings.Contains(rsp.IsError().Error(), "insufficient permissions: unauthorized"))
+
+	// and when TX contains multiSig ID
+	tx = gClient.DeleteArtifact("alpetest/grafain:vx.y.z")
+	client.AddMultiSig(tx, weavetest.SequenceID(1))
+	err = client.SignTx(tx, bertKey, chainID, seq)
+	assert.Nil(t, err)
+	rsp = gClient.BroadcastTxSync(tx, time.Second)
+	// then no errors as multiSig is has role
+	assert.Nil(t, rsp.IsError())
+}
+
+type HookRuntime struct {
+	CertDir, AdmissionPath, HookAddress string
+	Abort                               chan error
+}
+
+func StartHook(t *testing.T, node *node.Node, tmConf *config.Config) HookRuntime {
 	// configure and start admission web hook
 	_, filename, _, _ := runtime.Caller(0)
 	certDir := filepath.Join(filepath.Dir(filename), "../../contrib/pki")
@@ -91,71 +213,18 @@ func TestEndToEndScenario(t *testing.T) {
 			abort <- err
 		}
 	}()
+	return HookRuntime{certDir, admissionPath, hookAddress, abort}
+}
 
-	awaitTendermitUp(t, tmConf, err, node)
+func AwaitHookUp(t *testing.T, hookRuntime HookRuntime) {
 	select {
-	case err := <-abort:
+	case err := <-hookRuntime.Abort:
 		t.Fatalf("unexpected error: %+v", err)
 	default: // when hook is up by now then it must be good
 	}
-
-	// now start testing grafain via abci operations
-	gClient := client.NewClient(rpcclient.NewLocal(node))
-
-	// create artifact should succeed
-	adminGroupAddress, err := weave.ParseAddress("seq:rbac/role/1")
-	assert.Nil(t, err)
-	tx := gClient.CreateArtifact(adminGroupAddress, "foo/bar:v0.0.1", "myChecksum")
-	nonce := client.NewNonce(gClient, alice)
-	seq, err := nonce.Next()
-	assert.Nil(t, err)
-	err = client.SignTx(tx, aliceKey, tmConf.ChainID(), seq)
-	assert.Nil(t, err)
-	rsp := gClient.BroadcastTxSync(tx, time.Second)
-	assert.Nil(t, rsp.IsError())
-
-	// then get and list artifact should succeed
-	a, err := gClient.GetArtifactByImage(rsp.Response.DeliverTx.Data)
-	assert.Nil(t, err)
-	assert.Equal(t, "myChecksum", a.Checksum)
-	assert.Equal(t, adminGroupAddress, a.Owner)
-	assert.Nil(t, err)
-
-	all, err := gClient.ListArtifact()
-	assert.Nil(t, err)
-
-	if len(all) == 0 {
-		t.Fatal("Expected non empty result")
-	}
-	// and when call to admission web hook with a known image
-	hookClient := testsupport.NewAdmissionClient(t, certDir, hookAddress, admissionPath)
-	content := podJson("foo/bar:v0.0.1")
-	data := hookClient.Query(content)
-	assert.Equal(t, true, data.Response.Allowed)
-	assert.Equal(t, 200, data.Response.Status.Code)
-	// and a genesis image
-	content = podJson("alpetest/grafain:vx.y.z")
-	data = hookClient.Query(content)
-	assert.Equal(t, true, data.Response.Allowed)
-	assert.Equal(t, 200, data.Response.Status.Code)
-
-	// and with an unknown image
-	data = hookClient.Query(podJson("any/unknown:image"))
-	assert.Equal(t, false, data.Response.Allowed)
-	assert.Equal(t, 404, data.Response.Status.Code)
-
-	// and when delete
-	tx = gClient.DeleteArtifact("foo/bar:v0.0.1")
-	seq, err = nonce.Next()
-	assert.Nil(t, err)
-	err = client.SignTx(tx, aliceKey, tmConf.ChainID(), seq)
-	assert.Nil(t, err)
-	rsp = gClient.BroadcastTxSync(tx, time.Second)
-	assert.Nil(t, rsp.IsError())
 }
 
 func awaitTendermitUp(t *testing.T, tmConf *config.Config, err error, node *node.Node) {
-	t.Helper()
 	// wait for tendermit up
 	testsupport.WaitForGRPC(t, tmConf)
 	testsupport.WaitForRPC(t, tmConf)
@@ -167,16 +236,13 @@ func awaitTendermitUp(t *testing.T, tmConf *config.Config, err error, node *node
 }
 
 func localServerAddress(t *testing.T) string {
-	t.Helper()
 	hookPort, err := cmn.GetFreePort()
 	assert.Nil(t, err)
 	hookAddress := fmt.Sprintf("127.0.0.1:%d", hookPort)
 	return hookAddress
 }
 
-func initGenesis(t *testing.T, filename string, alice weave.Address) {
-	t.Helper()
-
+func initGenesis(t *testing.T, filename string, alice, bert weave.Address) {
 	doc, err := tm.GenesisDocFromFile(filename)
 	assert.Nil(t, err)
 	doc.ConsensusParams.Block.TimeIotaMs = int64(1)
@@ -192,6 +258,19 @@ func initGenesis(t *testing.T, filename string, alice weave.Address) {
 			"msgfee": dict{
 				"owner":     alice,
 				"fee_admin": alice,
+			},
+		},
+		"multisig": []dict{
+			{
+				"activation_threshold": 3,
+				"admin_threshold":      3,
+				"//name":               "admin multisig",
+				"participants": []dict{
+					{
+						"signature": bert,
+						"weight":    3,
+					},
+				},
 			},
 		},
 		"rbac": dict{
@@ -217,8 +296,17 @@ func initGenesis(t *testing.T, filename string, alice weave.Address) {
 					"name": "Alice",
 					"signatures": []dict{
 						{
-							"name":      "test",
+							"name":      "Signature test",
 							"signature": alice,
+						},
+					},
+				},
+				{
+					"name": "MultiSig managed by Bert",
+					"signatures": []dict{
+						{
+							"name":      "MultiSig test",
+							"signature": "cond:multisig/usage/0000000000000001",
 						},
 					},
 				},
@@ -227,6 +315,10 @@ func initGenesis(t *testing.T, filename string, alice weave.Address) {
 				{
 					"role_id":   2,
 					"signature": alice,
+				},
+				{
+					"role_id":   1,
+					"signature": "cond:multisig/usage/0000000000000001",
 				},
 			},
 		},
