@@ -118,6 +118,7 @@ func (d AuthZDecorator) Check(ctx weave.Context, store weave.KVStore, tx weave.T
 		return nil, err
 	}
 	perm := d.resolvePermission(msg)
+	println("++ require permission: ", perm)
 	if !d.authZ.HasPermission(ctx, perm) {
 		return nil, errors.Wrap(errors.ErrUnauthorized, "insufficient permissions")
 	}

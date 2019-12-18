@@ -86,7 +86,7 @@ func TestEndToEndScenario(t *testing.T) {
 	gClient := client.NewClient(rpcclient.NewLocal(node))
 
 	// create artifact should succeed
-	adminGroupAddress, err := weave.ParseAddress("seq:rbac/role/1")
+	adminGroupAddress, err := weave.ParseAddress("seq:rbac/role/2")
 	assert.Nil(t, err)
 	tx := gClient.CreateArtifact(adminGroupAddress, "foo/bar:v0.0.1", "myChecksum")
 	nonce := client.NewNonce(gClient, alice)
@@ -137,7 +137,9 @@ func TestEndToEndScenario(t *testing.T) {
 	assert.Nil(t, rsp.IsError())
 }
 
-func TestMultiSigScenario(t *testing.T) {
+// Admin role contains a wildcard permission and is owned by a multiSig with Bert as member
+// Bert does not have permissions himself.
+func TestMultiSigAdminScenario(t *testing.T) {
 	logger := log.NewTMLogger(log.NewSyncWriter(os.Stdout))
 	logger = log.NewFilter(logger, log.AllowError())
 
@@ -279,13 +281,20 @@ func initGenesis(t *testing.T, filename string, alice, bert weave.Address) {
 					"name":  "system.admin",
 					"owner": "seq:rbac/role/1",
 					"permissions": []string{
+						"_grafain.*",
+					},
+				},
+				{
+					"name":  "k8.admin",
+					"owner": "seq:rbac/role/1",
+					"permissions": []string{
 						"_grafain.artifacts.delete",
 					},
 				},
 				{
 					"name":     "k8s.devops",
 					"owner":    "seq:rbac/role/1",
-					"role_ids": []int{1},
+					"role_ids": []int{2},
 					"permissions": []string{
 						"_grafain.artifacts.create",
 					},
@@ -313,7 +322,7 @@ func initGenesis(t *testing.T, filename string, alice, bert weave.Address) {
 			},
 			"role_bindings": []dict{
 				{
-					"role_id":   2,
+					"role_id":   3,
 					"signature": alice,
 				},
 				{

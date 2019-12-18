@@ -74,13 +74,20 @@ data:
               "name": "system.admin",
               "owner": "seq:rbac/role/1",
               "permissions": [
-                "_grafain.artifacts.delete"
+                "_grafain.*"
+              ]
+            },
+            {
+              "name": "k8s.admin",
+              "owner": "seq:rbac/role/1",
+              "permissions": [
+                "_grafain.artifact.delete"
               ]
             },
             {
               "name": "k8s.devops",
               "owner": "seq:rbac/role/1",
-              "role_ids": [ 1 ],
+              "role_ids": [ 2 ],
               "permissions": [
                 "_grafain.artifacts.create"
               ]
@@ -91,7 +98,11 @@ data:
               "name": "Alice",
               "signatures": [
                 {
-                  "name": "test",
+                  "name": "admin",
+                  "signature": "cond:multisig/usage/0000000000000001"
+                },
+                {
+                  "name": "devops",
                   "signature": "0E95C039EF14EE329D0E09D84F909CF9EB5EF472"
                 }
               ]
@@ -99,7 +110,11 @@ data:
           ],
           "role_bindings": [
             {
-              "role_id": 2,
+              "role_id": 1,
+              "signature": "cond:multisig/usage/0000000000000001"
+            },
+            {
+              "role_id": 3,
               "signature": "0E95C039EF14EE329D0E09D84F909CF9EB5EF472"
             }
           ]

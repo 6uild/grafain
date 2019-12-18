@@ -66,12 +66,21 @@ func (a Authenticate) HasAddress(ctx weave.Context, addr weave.Address) bool {
 
 type Authorize struct{}
 
-// HasPermission for authorization
+// HasPermission for authorization checks if the requested permission was granted by the passed authN context.
 func (Authorize) HasPermission(ctx weave.Context, p Permission) bool {
 	val, _ := ctx.Value(contextRBACPermissions).(map[Permission]struct{})
 	if val == nil {
 		return false
 	}
-	_, ok := val[p]
-	return ok
+	// first check for exact matches
+	if _, ok := val[p]; ok {
+		return true
+	}
+	// then check for wildcards
+	for k, _ := range val {
+		if k.Allows(p) {
+			return true
+		}
+	}
+	return false
 }

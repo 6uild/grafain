@@ -2,6 +2,7 @@ package rbac
 
 import (
 	"regexp"
+	"strings"
 
 	"github.com/iov-one/weave"
 	"github.com/iov-one/weave/errors"
@@ -14,7 +15,7 @@ func RoleCondition(id []byte) weave.Condition {
 
 const maxPermissionLength = 128
 
-var isPermission = regexp.MustCompile(`^[0-9a-z.\-_]{1,128}$`).MatchString
+var isPermission = regexp.MustCompile(`^[0-9a-z.\-_]{1,127}[0-9a-z*]$`).MatchString
 
 type Permission string
 
@@ -28,6 +29,21 @@ func (m Permission) Validate() error {
 		return errors.Field("permission", errors.ErrInput, "invalid characters")
 	}
 	return nil
+}
+
+func (m Permission) Allows(p Permission) bool {
+	if m.isWildcard() {
+		matcher := string(m)
+		matcher = matcher[0 : len(matcher)-1] // drop wildcard but keep dot to not cover parent path
+		return strings.HasPrefix(string(p), matcher) && !p.isWildcard()
+	}
+	return m == p
+}
+
+const wildcard = "*"
+
+func (m Permission) isWildcard() bool {
+	return strings.HasSuffix(string(m), wildcard)
 }
 
 type Permissions []Permission
