@@ -34,7 +34,7 @@ func Start(mgr manager.Manager, rpcAddress, hookServerAddress string, certDir, a
 
 	logger.Info("Registering webhooks to the internal webhook server")
 	hookServer.Register(admissionPath, &webhook.Admission{
-		Handler: NewPodValidator(
+		Handler: NewMutatingWebHook(
 			grafainClient,
 			logger.With("module", "pod-validator"),
 		),

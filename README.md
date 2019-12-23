@@ -213,9 +213,10 @@ make dist
 
 ## Other Admission Controller
 * https://github.com/cruise-automation/k-rail
-* https://github.com/IBM/portieris
 * https://github.com/open-policy-agent/gatekeeper
 * https://github.com/grafeas/kritis
+* https://github.com/anchore/kubernetes-admission-controller
+* https://github.com/IBM/portieris
 ## Other Resources
 * [Weave](https://docs.iov.one/docs/weave/welcome) abci framework
 * [Weave tutorial](https://docs.iov.one/docs/weave-tutorial/domain)
