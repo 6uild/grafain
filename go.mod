@@ -7,7 +7,7 @@ require (
 	github.com/go-logr/zapr v0.1.1 // indirect
 	github.com/gogo/protobuf v1.2.1
 	github.com/google/uuid v1.1.0 // indirect
-	github.com/iov-one/weave v0.23.0
+	github.com/iov-one/weave v0.24.1
 	github.com/onsi/ginkgo v1.8.0 // indirect
 	github.com/onsi/gomega v1.5.0 // indirect
 	github.com/pkg/errors v0.8.1

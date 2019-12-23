@@ -1,11 +1,10 @@
 package rbac
 
 import (
-	"github.com/alpe/grafain/pkg/orm"
 	"github.com/iov-one/weave"
 	"github.com/iov-one/weave/errors"
 	"github.com/iov-one/weave/migration"
-	weaveORM "github.com/iov-one/weave/orm"
+	"github.com/iov-one/weave/orm"
 )
 
 const roleBucketName = "role"
@@ -15,10 +14,10 @@ const SignatureIndex = "signature"
 
 const PackageName = "rbac"
 
-var roleSeq = weaveORM.NewSequence("role", "id")
+var roleSeq = orm.NewSequence("role", "id")
 
 type RoleBucket struct {
-	weaveORM.ModelBucket
+	orm.ModelBucket
 }
 
 func NewRoleBucket() *RoleBucket {
@@ -31,12 +30,12 @@ func NewRoleBucket() *RoleBucket {
 }
 
 type PrincipalBucket struct {
-	weaveORM.ModelBucket
+	orm.ModelBucket
 }
 
 func NewPrincipalBucket() *PrincipalBucket {
 	b := orm.NewModelBucket(principalBucketName, &Principal{},
-		orm.WithMultiIndex(SignatureIndex, indexSignatures, true),
+		orm.WithIndex(SignatureIndex, indexSignatures, true),
 	)
 	return &PrincipalBucket{
 		ModelBucket: migration.NewModelBucket(PackageName, b),
@@ -44,7 +43,7 @@ func NewPrincipalBucket() *PrincipalBucket {
 }
 
 // indexSignature is an indexer implementation for principal's signatures as a second index.
-func indexSignatures(obj weaveORM.Object) (bytes [][]byte, e error) {
+func indexSignatures(obj orm.Object) (bytes [][]byte, e error) {
 	if obj == nil {
 		return nil, errors.Wrap(errors.ErrHuman, "cannot take index of nil")
 	}
@@ -60,7 +59,7 @@ func indexSignatures(obj weaveORM.Object) (bytes [][]byte, e error) {
 }
 
 type RoleBindingBucket struct {
-	weaveORM.Bucket
+	orm.Bucket
 }
 
 func NewRoleBindingBucket() *RoleBindingBucket {
@@ -77,7 +76,7 @@ func (b RoleBindingBucket) Create(db weave.KVStore, roleIdKey []byte, signature 
 		Signature: signature,
 	}
 	key := buildKey(r)
-	return key, b.Bucket.Save(db, weaveORM.NewSimpleObj(key, &r))
+	return key, b.Bucket.Save(db, orm.NewSimpleObj(key, &r))
 }
 
 func (b RoleBindingBucket) FindRoleIDsByAddress(db weave.KVStore, a weave.Address) ([][]byte, error) {
