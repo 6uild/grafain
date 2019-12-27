@@ -2,6 +2,7 @@ package rbac
 
 import (
 	"context"
+	stderr "errors"
 	"testing"
 
 	"github.com/iov-one/weave"
@@ -67,14 +68,12 @@ func TestAuthNDecorator(t *testing.T) {
 		"no role": {
 			signer: anyBody,
 		},
-		// TODO: make it work with a multisig: https://github.com/6uild/grafain/pull/27#discussion_r358288703
 	}
 
 	cache := db.CacheWrap()
 
 	for msg, spec := range specs {
 		t.Run(msg, func(t *testing.T) {
-
 			auth := &weavetest.Auth{Signers: []weave.Condition{spec.signer}}
 			decorator := NewAuthNDecorator(auth)
 
@@ -165,6 +164,85 @@ func TestAuthZDecorator(t *testing.T) {
 			assert.Equal(t, 1, hn.DeliverCallCount())
 		})
 	}
+}
+
+func TestPassUpstreamErrors(t *testing.T) {
+	alice := weavetest.NewCondition()
+	auth := &weavetest.Auth{Signers: []weave.Condition{alice}}
+
+	db := store.MemStore()
+	migration.MustInitPkg(db, PackageName)
+
+	specs := map[string]struct {
+		src                        weave.Decorator
+		upstream                   func() *mockHandler
+		expCheckErr, expDeliverErr error
+	}{
+		"authN no upstream errors": {
+			src: NewAuthNDecorator(auth),
+			upstream: func() *mockHandler {
+				var hn mockHandler
+				return &hn
+			},
+		},
+		"authN upstream check error": {
+			src: NewAuthNDecorator(auth),
+			upstream: func() *mockHandler {
+				var hn mockHandler
+				hn.CheckErr = stderr.New("test error")
+				return &hn
+			},
+			expCheckErr: stderr.New("test error"),
+		},
+		"authN upstream deliver error": {
+			src: NewAuthNDecorator(auth),
+			upstream: func() *mockHandler {
+				var hn mockHandler
+				hn.DeliverErr = stderr.New("test error")
+				return &hn
+			},
+			expDeliverErr: stderr.New("test error"),
+		},
+		"authZ no upstream errors": {
+			src: NewAuthZDecorator(&Authorize{}, "_test"),
+			upstream: func() *mockHandler {
+				var hn mockHandler
+				return &hn
+			},
+		},
+		"authZ upstream check error": {
+			src: NewAuthZDecorator(&Authorize{}, "_test"),
+			upstream: func() *mockHandler {
+				var hn mockHandler
+				hn.CheckErr = stderr.New("test error")
+				return &hn
+			},
+			expCheckErr: stderr.New("test error"),
+		},
+		"authZ upstream deliver error": {
+			src: NewAuthZDecorator(&Authorize{}, "_test"),
+			upstream: func() *mockHandler {
+				var hn mockHandler
+				hn.DeliverErr = stderr.New("test error")
+				return &hn
+			},
+			expDeliverErr: stderr.New("test error"),
+		},
+	}
+	for msg, spec := range specs {
+		t.Run(msg, func(t *testing.T) {
+			//myError := stderr.New("test error")
+			//hn.CheckErr = myError
+			stack := weavetest.Decorate(spec.upstream(), spec.src)
+			ctx := withRBAC(context.TODO(), map[string]Role{"test": {Permissions: []Permission{"_test.authz"}}})
+			myTx := &weavetest.Tx{Msg: &weavetest.Msg{RoutePath: "authz"}}
+			_, err := stack.Check(ctx, db, myTx)
+			assert.Equal(t, spec.expCheckErr, err)
+			_, err = stack.Deliver(ctx, db, myTx)
+			assert.Equal(t, spec.expDeliverErr, err)
+		})
+	}
+
 }
 
 func verifyContext(t *testing.T, ctx weave.Context, expPermissions []Permission, expConds []weave.Condition) {
