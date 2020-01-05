@@ -1,0 +1,68 @@
+syntax = "proto3";
+
+package rbac;
+
+import "codec.proto";
+import "gogoproto/gogo.proto";
+
+// Role
+message Role {
+  weave.Metadata metadata = 1;
+  string name = 2;
+  string description = 3;
+  // Address of this entity. Set during creation and does not change.
+  bytes address = 4 [(gogoproto.casttype) = "github.com/iov-one/weave.Address"];
+  // RoleIDs refer to other roles that are included into this one.
+  repeated bytes role_ids = 5;
+  // todo: do we need an owner when permissions are use? Same applies to other entities here
+  bytes owner = 6 [(gogoproto.casttype) = "github.com/iov-one/weave.Address"];
+  repeated string permissions = 7 [(gogoproto.casttype) = "Permission"];
+}
+
+// RoleBinding links  a signature to a role.
+message RoleBinding {
+  weave.Metadata metadata = 1;
+  bytes role_id = 2; //[(gogoproto.customname) = "ContractID"];
+  bytes signature = 3 [(gogoproto.casttype) = "github.com/iov-one/weave.Address"];
+}
+
+// natural key: signature:role_id (unique) to allow prefix scan with signature to get all
+
+// Principal is a human user or service account.
+message Principal {
+  weave.Metadata metadata = 1;
+  string name = 2;
+  string description = 3;
+  // NamedSignature contains a set of name, signatures pairs. A principal can have 1 or more signatures associated with
+  // his account. Names and signature must both be unique within this set.
+  repeated NamedSignature signatures = 4;
+}
+
+message NamedSignature {
+  // Name is a human readable title for this signature.
+  string name = 1;
+  string description = 2;
+  bytes signature = 3 [(gogoproto.casttype) = "github.com/iov-one/weave.Address"];
+}
+
+// second index on signatures (unique)
+
+// 1. get rolebindings by participant address (second index)
+// 2. get roles by id
+// 3. add role address to authZ context
+// 4. for all rules ref in there and not processed: goto 2
+
+//message CreateMsg {
+//  weave.Metadata metadata = 1;
+//  repeated Participant participants = 2;
+//  uint32 activation_threshold = 3 [(gogoproto.casttype) = "Weight"];
+//  uint32 admin_threshold = 4 [(gogoproto.casttype) = "Weight"];
+//}
+//
+//message UpdateMsg {
+//  weave.Metadata metadata = 1;
+//  bytes contract_id = 2 [(gogoproto.customname) = "ContractID"];
+//  repeated Participant participants = 3;
+//  uint32 activation_threshold = 4 [(gogoproto.casttype) = "Weight"];
+//  uint32 admin_threshold = 5 [(gogoproto.casttype) = "Weight"];
+//}

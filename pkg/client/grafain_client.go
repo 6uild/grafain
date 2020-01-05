@@ -31,15 +31,16 @@ func (c Client) CreateArtifact(owner weave.Address, image, checksum string) *gra
 	}
 	return tx
 }
-
-// SignTx modifies the tx in-place, adding signatures
-func SignTx(tx *grafain.Tx, signer *crypto.PrivateKey, chainID string, nonce int64) error {
-	sig, err := sigs.SignTx(signer, tx, chainID, nonce)
-	if err != nil {
-		return err
+func (c Client) DeleteArtifact(image string) *grafain.Tx {
+	tx := &grafain.Tx{
+		Sum: &grafain.Tx_DeleteArtifactMsg{
+			DeleteArtifactMsg: &artifact.DeleteArtifactMsg{
+				Metadata: &weave.Metadata{Schema: 1},
+				Image:    artifact.Image(image),
+			},
+		},
 	}
-	tx.Signatures = append(tx.Signatures, sig)
-	return nil
+	return tx
 }
 
 func (c Client) GetArtifactsByChecksum(checksum string) ([]*artifact.Artifact, error) {
@@ -88,4 +89,19 @@ func (c Client) ListArtifact() ([]artifact.Artifact, error) {
 		out[i] = x
 	}
 	return out, nil
+}
+
+// SignTx modifies the tx in-place, adding signatures
+func SignTx(tx *grafain.Tx, signer crypto.Signer, chainID string, nonce int64) error {
+	sig, err := sigs.SignTx(signer, tx, chainID, nonce)
+	if err != nil {
+		return err
+	}
+	tx.Signatures = append(tx.Signatures, sig)
+	return nil
+}
+
+// AddMultiSig modifies the tx in-place, adding a multiSig ID
+func AddMultiSig(tx *grafain.Tx, multiSigID []byte) {
+	tx.Multisig = append(tx.Multisig, multiSigID)
 }

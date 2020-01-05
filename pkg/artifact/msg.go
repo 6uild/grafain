@@ -25,9 +25,7 @@ func (m CreateArtifactMsg) Validate() error {
 	if !isChecksum(m.Checksum) {
 		errs = errors.AppendField(errs, "Checksum", errors.ErrInput)
 	}
-	if m.Owner != nil {
-		errs = errors.AppendField(errs, "Owner", m.Owner.Validate())
-	}
+	errs = errors.AppendField(errs, "Owner", m.Owner.Validate())
 	return errs
 }
 

@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/alpe/grafain/pkg/artifact"
+	"github.com/alpe/grafain/pkg/rbac"
 	"github.com/iov-one/weave"
 	"github.com/iov-one/weave/app"
 	"github.com/iov-one/weave/coin"
@@ -43,6 +44,7 @@ func DecorateApp(application app.BaseApp, logger log.Logger) app.BaseApp {
 	application.WithInit(app.ChainInitializers(
 		&migration.Initializer{},
 		&multisig.Initializer{},
+		&rbac.Initializer{},
 		&cash.Initializer{},
 		&currency.Initializer{},
 		&validators.Initializer{},

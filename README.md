@@ -24,9 +24,9 @@ for Kubernetes are not. What you can expect to work:
 Supported policies
 - Accept only white listed images 
 
+:construction: There is not much doc yet, but please also check the [Wiki](https://github.com/6uild/grafain/wiki).
 
 ## Server
-
 
 ### Quickstart with [Minikube](https://kubernetes.io/docs/tasks/tools/install-minikube/)
 ```sh

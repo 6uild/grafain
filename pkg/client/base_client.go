@@ -206,7 +206,7 @@ func (b BroadcastTxResponse) IsError() error {
 	}
 	if b.Response.DeliverTx.IsErr() {
 		dtx := b.Response.DeliverTx
-		return errors.Errorf("CheckTx error: (%d) %s", dtx.Code, dtx.Log)
+		return errors.Errorf("DeliverTx error: (%d) %s", dtx.Code, dtx.Log)
 	}
 	return nil
 }

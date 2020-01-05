@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/alpe/grafain/pkg/artifact"
+	"github.com/alpe/grafain/pkg/rbac"
 	"github.com/iov-one/weave"
 	"github.com/iov-one/weave/app"
 	"github.com/iov-one/weave/coin"
@@ -38,8 +39,10 @@ import (
 // Authenticator returns the typical authentication,
 // just using public key signatures
 func Authenticator() x.Authenticator {
-	return x.ChainAuth(sigs.Authenticate{}, multisig.Authenticate{})
+	return x.ChainAuth(sigs.Authenticate{}, multisig.Authenticate{}, rbac.Authenticate{})
 }
+
+const GrafainPermissionPrefix = "_grafain"
 
 // Chain returns a chain of decorators, to handle authentication,
 // fees, logging, and recovery
@@ -56,6 +59,8 @@ func Chain(authFn x.Authenticator, minFee coin.Coin) app.Decorators {
 		utils.NewSavepoint().OnCheck(),
 		sigs.NewDecorator(),
 		multisig.NewDecorator(authFn),
+		rbac.NewAuthNDecorator(authFn),
+		rbac.NewAuthZDecorator(rbac.Authorize{}, GrafainPermissionPrefix),
 		// cash.NewDynamicFeeDecorator embeds utils.NewSavepoint().OnDeliver()
 		cash.NewDynamicFeeDecorator(authFn, ctrl),
 		msgfee.NewAntispamFeeDecorator(minFee),
@@ -111,6 +116,7 @@ func QueryRouter(minFee coin.Coin) weave.QueryRouter {
 		gov.RegisterQuery,
 		artifact.RegisterQuery,
 		cron.RegisterQuery,
+		rbac.RegisterQuery,
 	)
 	return r
 }
@@ -180,7 +186,7 @@ func CommitKVStore(dbPath string) (weave.CommitKVStore, error) {
 	// Expand the path fully
 	path, err := filepath.Abs(dbPath)
 	if err != nil {
-		return nil, fmt.Errorf("Invalid Database Name: %s", path)
+		return nil, fmt.Errorf("invalid Database Name: %s", path)
 	}
 
 	// Some external calls accidently add a ".db", which is now removed
