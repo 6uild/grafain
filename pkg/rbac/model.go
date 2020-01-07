@@ -51,7 +51,7 @@ type Permissions []Permission
 func (m Permissions) Validate() error {
 	var errs error
 	for _, p := range m {
-		errors.Append(errs, errors.Wrapf(p.Validate(), "permission %q", p))
+		errs = errors.Append(errs, errors.Wrapf(p.Validate(), "permission %q", p))
 	}
 	return errs
 }

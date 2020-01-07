@@ -35,8 +35,7 @@ import (
 const TendermintLocalAddr = "localhost:26657"
 
 var (
-	tendermintAddress = flag.String("address", TendermintLocalAddr, "destination address of tendermint rpc")
-	hexSeed           = flag.String("seed", "d34c1970ae90acf3405f2d99dcaca16d0c7db379f4beafcfdf667b9d69ce350d27f5fb440509dfa79ec883a0510bc9a9614c3d44188881f0c5e402898b4bf3c9", "private key seed in hex")
+	hexSeed = flag.String("seed", "d34c1970ae90acf3405f2d99dcaca16d0c7db379f4beafcfdf667b9d69ce350d27f5fb440509dfa79ec883a0510bc9a9614c3d44188881f0c5e402898b4bf3c9", "private key seed in hex")
 )
 
 func parsePrivateKey(t *testing.T) *crypto.PrivateKey {
@@ -79,8 +78,8 @@ func TestEndToEndScenario(t *testing.T) {
 
 	hookRuntime := StartHook(t, node, tmConf)
 
-	awaitTendermitUp(t, tmConf, err, node)
-	AwaitHookUp(t, hookRuntime)
+	awaitTendermitUp(t, tmConf, node)
+	awaitHookUp(t, hookRuntime)
 
 	// now start testing grafain via abci operations
 	gClient := client.NewClient(rpcclient.NewLocal(node))
@@ -165,7 +164,7 @@ func TestMultiSigAdminScenario(t *testing.T) {
 	assert.Nil(t, node.Start())
 	defer node.Stop()
 	chainID := tmConf.ChainID()
-	awaitTendermitUp(t, tmConf, err, node)
+	awaitTendermitUp(t, tmConf, node)
 
 	gClient := client.NewClient(rpcclient.NewLocal(node))
 	nonce := client.NewNonce(gClient, bert)
@@ -218,7 +217,7 @@ func StartHook(t *testing.T, node *node.Node, tmConf *config.Config) HookRuntime
 	return HookRuntime{certDir, admissionPath, hookAddress, abort}
 }
 
-func AwaitHookUp(t *testing.T, hookRuntime HookRuntime) {
+func awaitHookUp(t *testing.T, hookRuntime HookRuntime) {
 	select {
 	case err := <-hookRuntime.Abort:
 		t.Fatalf("unexpected error: %+v", err)
@@ -226,14 +225,14 @@ func AwaitHookUp(t *testing.T, hookRuntime HookRuntime) {
 	}
 }
 
-func awaitTendermitUp(t *testing.T, tmConf *config.Config, err error, node *node.Node) {
+func awaitTendermitUp(t *testing.T, tmConf *config.Config, node *node.Node) {
 	// wait for tendermit up
 	testsupport.WaitForGRPC(t, tmConf)
 	testsupport.WaitForRPC(t, tmConf)
 	t.Log("Endpoints are up")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	_, err = weaveclient.NewLocalClient(node).WaitForNextBlock(ctx)
+	_, err := weaveclient.NewLocalClient(node).WaitForNextBlock(ctx)
 	assert.Nil(t, err)
 }
 

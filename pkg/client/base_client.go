@@ -64,8 +64,8 @@ type Nonce struct {
 
 // NewNonce creates a nonce for a client / address pair.
 // Call Query to force a query, Next to use cache if possible
-func NewNonce(client userSource, addr weave.Address) *Nonce {
-	return &Nonce{client: client, addr: addr}
+func NewNonce(c userSource, addr weave.Address) *Nonce {
+	return &Nonce{client: c, addr: addr}
 }
 
 // Query always queries the blockchain for the next nonce
@@ -105,7 +105,7 @@ func (n *Nonce) Next() (int64, error) {
 	return result, nil
 }
 
-//************ generic (weave) functionality *************//
+// ************ generic (weave) functionality *************//
 
 // Status will return the raw status from the node
 func (c *BaseClient) Status() (*Status, error) {
@@ -235,7 +235,7 @@ func (c *BaseClient) BroadcastTxSync(tx weave.Tx, timeout time.Duration) Broadca
 		return BroadcastTxResponse{Error: err}
 	}
 	if res.Code != 0 {
-		return BroadcastTxResponse{Error: errors.WithMessage(fmt.Errorf("CheckTx failed with code %d", res.Code), res.Log)}
+		return BroadcastTxResponse{Error: errors.WithMessage(fmt.Errorf("checkTx failed with code %d", res.Code), res.Log)}
 	}
 
 	// and wait for confirmation
@@ -246,9 +246,7 @@ func (c *BaseClient) BroadcastTxSync(tx weave.Tx, timeout time.Duration) Broadca
 
 	txe, ok := evt.(tmtypes.EventDataTx)
 	if !ok {
-		if err != nil {
-			return BroadcastTxResponse{Error: fmt.Errorf("WaitForOneEvent did not return an EventDataTx object")}
-		}
+		return BroadcastTxResponse{Error: fmt.Errorf("unexpected event type %T ", evt)}
 	}
 
 	return BroadcastTxResponse{
@@ -272,6 +270,7 @@ func (c *BaseClient) WaitForTxEvent(tx tmtypes.Tx, evtTyp string, timeout time.D
 	}
 
 	// make sure to unregister after the test is over
+	// errcheck ignore
 	defer c.conn.UnsubscribeAll(ctx, uuid)
 
 	select {
@@ -336,7 +335,7 @@ func (c *BaseClient) Subscribe(query tmpubsub.Query) (<-chan ctypes.ResultEvent,
 		return out, nil, err
 	}
 	cancel := func() {
-		c.conn.Unsubscribe(ctx, c.subscriber, query.String())
+		_ = c.conn.Unsubscribe(ctx, c.subscriber, query.String())
 	}
 	return out, cancel, nil
 }

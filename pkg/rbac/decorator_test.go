@@ -45,6 +45,7 @@ func TestAuthNDecorator(t *testing.T) {
 	assert.Nil(t, err)
 
 	_, err = bindBucket.Create(db, myRoleID, alice.Address())
+	assert.Nil(t, err)
 	_, err = bindBucket.Create(db, myExtRoleID, bert.Address())
 	assert.Nil(t, err)
 
@@ -231,8 +232,6 @@ func TestPassUpstreamErrors(t *testing.T) {
 	}
 	for msg, spec := range specs {
 		t.Run(msg, func(t *testing.T) {
-			//myError := stderr.New("test error")
-			//hn.CheckErr = myError
 			stack := weavetest.Decorate(spec.upstream(), spec.src)
 			ctx := withRBAC(context.TODO(), map[string]Role{"test": {Permissions: []Permission{"_test.authz"}}})
 			myTx := &weavetest.Tx{Msg: &weavetest.Msg{RoutePath: "authz"}}

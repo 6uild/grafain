@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"flag"
 	"io"
 	"io/ioutil"
 	"testing"
@@ -43,8 +42,6 @@ func TestCmdSignTransactionHappyPath(t *testing.T) {
 		t.Fatalf("want one signature, got %d", n)
 	}
 }
-
-var logRequestFl = flag.Bool("logrequest", false, "Log all requests send to tendermint mock server. This is useful when writing new test. Use curl to send the same request to a real tendermint node and record the response.")
 
 func mustCreateFile(t testing.TB, r io.Reader) string {
 	t.Helper()

@@ -77,7 +77,7 @@ func (Authorize) HasPermission(ctx weave.Context, p Permission) bool {
 		return true
 	}
 	// then check for wildcards
-	for k, _ := range val {
+	for k := range val {
 		if k.Allows(p) {
 			return true
 		}

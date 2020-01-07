@@ -267,10 +267,6 @@ func numericID(s string) ([]byte, error) {
 	return encID, nil
 }
 
-func plainID(plain string) ([]byte, error) {
-	return []byte(plain), nil
-}
-
 func refKey(raw []byte) (string, error) {
 	// Skip the prefix, being the characters before : (including separator)
 	val := withoutDBPrefix(raw)

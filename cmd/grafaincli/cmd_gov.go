@@ -39,7 +39,32 @@ transaction (ie signatures) are being dropped.
 	fl.Parse(args)
 
 	msg, err := readProposalPayloadMsg(input)
+	if err != nil {
+		return err
+	}
+	rawOption, err := toOption(msg)
+	if err != nil {
+		return err
+	}
 
+	propTx := &grafain.Tx{
+		Sum: &grafain.Tx_GovCreateProposalMsg{
+			GovCreateProposalMsg: &gov.CreateProposalMsg{
+				Metadata:       &weave.Metadata{Schema: 1},
+				Title:          *titleFl,
+				Description:    *descFl,
+				StartTime:      startFl.UnixTime(),
+				ElectionRuleID: *eRuleFl,
+				RawOption:      rawOption,
+			},
+		},
+	}
+
+	_, err = writeTx(output, propTx)
+	return err
+}
+
+func toOption(msg weave.Msg) ([]byte, error) {
 	// We must manually assign the message to the right attribute according
 	// to it's type.
 	//
@@ -54,9 +79,9 @@ transaction (ie signatures) are being dropped.
 	var option grafain.ProposalOptions
 	switch msg := msg.(type) {
 	case nil:
-		return errors.New("transaction without a message")
+		return nil, errors.New("transaction without a message")
 	default:
-		return fmt.Errorf("message type not supported: %T", msg)
+		return nil, fmt.Errorf("message type not supported: %T", msg)
 
 	case *cash.SendMsg:
 		option.Option = &grafain.ProposalOptions_CashSendMsg{
@@ -85,7 +110,7 @@ transaction (ie signatures) are being dropped.
 	case *grafain.ExecuteBatchMsg:
 		msgs, err := msg.MsgList()
 		if err != nil {
-			return fmt.Errorf("cannot extract messages: %s", err)
+			return nil, fmt.Errorf("cannot extract messages: %s", err)
 		}
 		var messages []grafain.ExecuteProposalBatchMsg_Union
 		for _, m := range msgs {
@@ -195,24 +220,9 @@ transaction (ie signatures) are being dropped.
 
 	rawOption, err := option.Marshal()
 	if err != nil {
-		return fmt.Errorf("cannot serialize %T option: %s", option, err)
+		return nil, fmt.Errorf("cannot serialize %T option: %s", option, err)
 	}
-
-	propTx := &grafain.Tx{
-		Sum: &grafain.Tx_GovCreateProposalMsg{
-			GovCreateProposalMsg: &gov.CreateProposalMsg{
-				Metadata:       &weave.Metadata{Schema: 1},
-				Title:          *titleFl,
-				Description:    *descFl,
-				StartTime:      startFl.UnixTime(),
-				ElectionRuleID: *eRuleFl,
-				RawOption:      rawOption,
-			},
-		},
-	}
-
-	_, err = writeTx(output, propTx)
-	return err
+	return rawOption, nil
 }
 
 func readProposalPayloadMsg(input io.Reader) (weave.Msg, error) {

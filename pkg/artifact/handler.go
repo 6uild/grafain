@@ -33,7 +33,7 @@ type CreateArtifactHandler struct {
 
 // Check just verifies it is properly formed and returns the cost of executing it.
 func (h CreateArtifactHandler) Check(ctx weave.Context, store weave.KVStore, tx weave.Tx) (*weave.CheckResult, error) {
-	_, err := h.validate(ctx, store, tx)
+	_, err := h.validate(ctx, tx)
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +42,7 @@ func (h CreateArtifactHandler) Check(ctx weave.Context, store weave.KVStore, tx 
 
 // Deliver persists the artifact data if all preconditions are met
 func (h CreateArtifactHandler) Deliver(ctx weave.Context, db weave.KVStore, tx weave.Tx) (*weave.DeliverResult, error) {
-	msg, err := h.validate(ctx, db, tx)
+	msg, err := h.validate(ctx, tx)
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +61,7 @@ func (h CreateArtifactHandler) Deliver(ctx weave.Context, db weave.KVStore, tx w
 }
 
 // validate does all common pre-processing between Check and Deliver
-func (h CreateArtifactHandler) validate(ctx weave.Context, db weave.KVStore, tx weave.Tx) (*CreateArtifactMsg, error) {
+func (h CreateArtifactHandler) validate(ctx weave.Context, tx weave.Tx) (*CreateArtifactMsg, error) {
 	var msg CreateArtifactMsg
 
 	if err := weave.LoadMsg(tx, &msg); err != nil {

@@ -37,12 +37,12 @@ func (tx *Tx) GetMsg() (weave.Msg, error) {
 func (tx *Tx) GetSignBytes() ([]byte, error) {
 	// temporarily unset the signatures, as the sign bytes
 	// should only come from the data itself, not previous signatures
-	sigs := tx.Signatures
+	signatures := tx.Signatures
 	tx.Signatures = nil
 
 	bz, err := tx.Marshal()
 
 	// reset the signatures after calculating the bytes
-	tx.Signatures = sigs
+	tx.Signatures = signatures
 	return bz, err
 }

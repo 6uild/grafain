@@ -16,7 +16,7 @@ func cmdSendTokens(input io.Reader, output io.Writer, args []string) error {
 	fl := flag.NewFlagSet("", flag.ExitOnError)
 	fl.Usage = func() {
 		fmt.Fprintln(flag.CommandLine.Output(), `
-Create a transaction for transfering funds from the source account to the
+Create a transaction for transferring funds from the source account to the
 destination account.
 		`)
 		fl.PrintDefaults()

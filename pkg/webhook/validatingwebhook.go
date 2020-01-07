@@ -14,28 +14,28 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
-var _ inject.Client = &podValidator{}
-var _ admission.DecoderInjector = &podValidator{}
+var _ inject.Client = &PodValidator{}
+var _ admission.DecoderInjector = &PodValidator{}
 
 type queryStore interface {
 	AbciQuery(path string, data []byte) (grafain.AbciResponse, error)
 }
-type podValidator struct {
+type PodValidator struct {
 	logger  log.Logger
 	client  client.Client
 	decoder *admission.Decoder
 	source  queryStore
 }
 
-func NewPodValidator(source queryStore, logger log.Logger) *podValidator {
-	return &podValidator{
+func NewPodValidator(source queryStore, logger log.Logger) *PodValidator {
+	return &PodValidator{
 		logger: logger,
 		source: source,
 	}
 }
 
 // Handle accepts all pod admission requests
-func (v *podValidator) Handle(ctx context.Context, req admission.Request) admission.Response {
+func (v *PodValidator) Handle(ctx context.Context, req admission.Request) admission.Response {
 	logger := v.logger.With("uid", req.UID, "kind", req.Kind.Kind, "req", req)
 	logger.Debug("Starting pod admission")
 	defer func() { logger.Debug("Finished pod admission") }()
@@ -56,7 +56,7 @@ func (v *podValidator) Handle(ctx context.Context, req admission.Request) admiss
 	return admission.Allowed("")
 }
 
-var internalToHttpCode = map[error]int32{
+var internalToHTTPCode = map[error]int32{
 	errors.ErrNotFound:     http.StatusNotFound,
 	errors.ErrUnauthorized: http.StatusUnauthorized,
 	errors.ErrDuplicate:    http.StatusConflict,
@@ -64,7 +64,7 @@ var internalToHttpCode = map[error]int32{
 
 func encodeErr(err error) (int32, error) {
 	err = errors.Redact(err)
-	if c, ok := internalToHttpCode[err]; ok {
+	if c, ok := internalToHTTPCode[err]; ok {
 		return c, err
 	}
 	return http.StatusInternalServerError, err
@@ -72,8 +72,9 @@ func encodeErr(err error) (int32, error) {
 
 const queryByImage = "/artifacts"
 
-func (v *podValidator) doWithContainers(containers []corev1.Container) error {
-	for _, c := range containers {
+func (v *PodValidator) doWithContainers(containers []corev1.Container) error {
+	for i := range containers {
+		c := containers[i]
 		v.logger.Info("inspecting container", "image", c.Image, "name", c.Name)
 		resp, err := v.source.AbciQuery(queryByImage, []byte(c.Image))
 		if err != nil {
@@ -97,12 +98,12 @@ func (v *podValidator) doWithContainers(containers []corev1.Container) error {
 	return nil
 }
 
-func (v *podValidator) InjectClient(c client.Client) error {
+func (v *PodValidator) InjectClient(c client.Client) error {
 	v.client = c
 	return nil
 }
 
-func (v *podValidator) InjectDecoder(d *admission.Decoder) error {
+func (v *PodValidator) InjectDecoder(d *admission.Decoder) error {
 	v.decoder = d
 	return nil
 }
