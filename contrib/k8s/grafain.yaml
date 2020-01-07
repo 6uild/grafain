@@ -81,7 +81,7 @@ spec:
       initContainers:
         - name: init
           imagePullPolicy: Always
-          image: iov1/tendermint:v0.31.10-iov1
+          image: iov1/tendermint:v0.31.11-iov1
           env:
             - name: TMHOME
               value: /data/tendermint
@@ -139,6 +139,7 @@ spec:
             - -hook-address=0.0.0.0:8443
             - start
             - -bind=unix:///socks/app.sock
+            - -debug=true
           ports:
             - containerPort: 8443
               name: hook

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -eox
+set -eox pipefail
 
 kubectl apply -f genesis.yaml
 kubectl apply -f grafain-rbac.yaml

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -125,7 +126,7 @@ func TestEndToEndScenario(t *testing.T) {
 	// and with an unknown image
 	data = hookClient.Query(podJson("any/unknown:image"))
 	assert.Equal(t, false, data.Response.Allowed)
-	assert.Equal(t, 404, data.Response.Status.Code)
+	assert.Equal(t, http.StatusForbidden, data.Response.Status.Code)
 
 	// and when delete
 	tx = gClient.DeleteArtifact("foo/bar:v0.0.1")

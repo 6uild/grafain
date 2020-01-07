@@ -1,5 +1,5 @@
 apiVersion: admissionregistration.k8s.io/v1beta1
-kind: ValidatingWebhookConfiguration
+kind: MutatingWebhookConfiguration
 metadata:
   name: grafain
   labels:
@@ -9,15 +9,27 @@ webhooks:
 #  failurePolicy: Ignore # for bootstrapping
   failurePolicy: Fail
   rules:
-    - apiGroups:
-        - ""
-      apiVersions:
-        - v1
-      operations:
-        - CREATE
-      resources:
-        - pods
-      scope: "Namespaced"
+  - operations: ["CREATE","UPDATE","CONNECT"]
+    apiGroups: ["*"]
+    apiVersions: ["*"]
+    resources:
+      - pods
+      - deployments
+      - replicationcontrollers
+      - replicasets
+      - daemonsets
+      - statefulsets
+      - jobs
+      - cronjobs
+      - ingresses
+      - pods/exec
+  sideEffects: None
+#  namespaceSelector:
+#    matchExpressions:
+#      - key: name
+#        operator: NotIn
+#        values:
+#          - {{ .Release.Namespace }}
   clientConfig:
     service:
       namespace: default
