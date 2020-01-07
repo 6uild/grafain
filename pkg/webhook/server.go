@@ -33,11 +33,15 @@ func Start(mgr manager.Manager, rpcAddress, hookServerAddress string, certDir, a
 	grafainClient := client.NewClient(weaveclient.NewHTTPConnection(rpcAddress))
 
 	logger.Info("Registering webhooks to the internal webhook server")
+	hook, err := NewMutatingWebHook(
+		grafainClient,
+		logger.With("module", "pod-validator"),
+	)
+	if err != nil {
+		return errors.Wrap(err, "hook")
+	}
 	hookServer.Register(admissionPath, &webhook.Admission{
-		Handler: NewMutatingWebHook(
-			grafainClient,
-			logger.With("module", "pod-validator"),
-		),
+		Handler: hook,
 	})
 	hookServer.Register("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)

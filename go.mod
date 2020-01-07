@@ -24,3 +24,5 @@ require (
 	k8s.io/client-go v0.0.0-20190918200256-06eb1244587a
 	sigs.k8s.io/controller-runtime v0.3.0
 )
+
+replace github.com/cruise-automation/k-rail => /Users/alex/workspace/k8s-eval/k-rail

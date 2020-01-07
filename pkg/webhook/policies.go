@@ -24,6 +24,7 @@ func registerDefaultPolicies(s *mutatingWebHook) {
 	// Policies will be run in the order that they are registered.
 	// Policies that mutate will have their resulting patch merged with any previous patches in that order as well.
 
+	registerPolicy(s, pod.PolicyEmptyDirSizeLimit{})
 	registerPolicy(s, pod.PolicyNoExec{})
 	registerPolicy(s, pod.PolicyBindMounts{})
 	registerPolicy(s, pod.PolicyDockerSock{})
@@ -46,7 +47,7 @@ func registerPolicy(s *mutatingWebHook, v Policy) {
 	for _, val := range s.Config.Policies {
 		if val.Name == v.Name() {
 			found = true
-			if val.Enabled {
+			//if val.Enabled {
 				if s.Config.GlobalReportOnly {
 					s.ReportOnlyPolicies = append(s.ReportOnlyPolicies, v)
 					log.Infof("enabling %s validator in REPORT ONLY mode because GLOBAL REPORT ONLY MODE is on", v.Name())
@@ -57,10 +58,10 @@ func registerPolicy(s *mutatingWebHook, v Policy) {
 					s.EnforcedPolicies = append(s.EnforcedPolicies, v)
 					log.Infof("enabling %s validator in ENFORCE mode", v.Name())
 				}
-			} else {
-				log.Infof("validator %s is NOT ENABLED", v.Name())
-
-			}
+			//} else {
+			//	log.Infof("validator %s is NOT ENABLED", v.Name())
+			//
+			//}
 		}
 	}
 	if !found {

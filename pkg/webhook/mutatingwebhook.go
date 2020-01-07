@@ -4,12 +4,13 @@ import (
 	"context"
 
 	grafain "github.com/alpe/grafain/pkg/client"
-	"github.com/alpe/grafain/pkg/policy"
 	"github.com/cruise-automation/k-rail/policies"
 	"github.com/cruise-automation/k-rail/resource"
 	"github.com/cruise-automation/k-rail/server"
+	"github.com/pkg/errors"
 	"github.com/tendermint/tendermint/libs/log"
 	"gomodules.xyz/jsonpatch/v2"
+	apiresource "k8s.io/apimachinery/pkg/api/resource"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -33,17 +34,45 @@ type mutatingWebHook struct {
 	Exemptions         []policies.CompiledExemption
 }
 
-func NewMutatingWebHook(source queryStore, logger log.Logger) *mutatingWebHook {
+func NewMutatingWebHook(source queryStore, logger log.Logger) (*mutatingWebHook, error) {
+	exemp :=
+		`
+- resource_name: "*"
+  namespace: "kube-system"
+  username: "*"
+  group: "*"
+  exempt_policies: ["*"]
+`
+	exemptions, err := policies.ExemptionsFromYAML([]byte(exemp))
+	if err != nil {
+		return nil, errors.Wrap(err, "setup exemptions")
+	}
 	r := &mutatingWebHook{
-		logger: logger,
-		source: source,
-		Config: server.Config{PolicyConfig: policies.Config{
-			PolicyTrustedRepositoryRegexes: []string{".*"},
-		}},
+		logger:     logger,
+		source:     source,
+		Exemptions: exemptions,
+		Config: server.Config{
+			Policies: []server.PolicySettings{
+				{
+					Name:       "pod_empty_dir_size_limit",
+					Enabled:    true,
+					ReportOnly: false,
+				},
+			},
+			PolicyConfig: policies.Config{
+				PolicyTrustedRepositoryRegexes: []string{
+					"^k8s.gcr.io/.*",     // official k8s GCR repo
+					`^[A-Za-z0-9\-:@]+$`, // official docker hub images
+				},
+				MutateEmptyDirSizeLimit: policies.MutateEmptyDirSizeLimit{
+					MaximumSizeLimit: apiresource.MustParse("1Gi"),
+					DefaultSizeLimit: apiresource.MustParse("512Mi"),
+				},
+			}},
 	}
 	registerDefaultPolicies(r)
-	r.EnforcedPolicies = append(r.EnforcedPolicies, policy.NewArtifactWhitelist(source))
-	return r
+	//r.EnforcedPolicies = append(r.EnforcedPolicies, policy.NewArtifactWhitelist(source))
+	return r, nil
 }
 
 // Handle all admission requests
@@ -215,12 +244,12 @@ func (s *mutatingWebHook) printAuditLogs(username string, exemptViolations []pol
 //	return http.StatusInternalServerError, err
 //}
 
-func (v *mutatingWebHook) InjectClient(c client.Client) error {
-	v.client = c
+func (s *mutatingWebHook) InjectClient(c client.Client) error {
+	s.client = c
 	return nil
 }
 
-func (v *mutatingWebHook) InjectDecoder(d *admission.Decoder) error {
+func (s *mutatingWebHook) InjectDecoder(d *admission.Decoder) error {
 	//v.decoder = d
 	return nil
 }
