@@ -184,7 +184,7 @@ func tendermintStore(nodeURL string) weave.ReadOnlyKVStore {
 	return app.NewABCIStore(rpcQueryWrapper{tm})
 }
 
-// readInput returns all bytes waiting on given input. This function immediatly
+// readInput returns all bytes waiting on given input. This function immediately
 // returns errNoPipe error if the input is not piped to avoid forever waiting.
 func readInput(input io.Reader) ([]byte, error) {
 	// If the given reader is providing a stat information (ie os.Stdin)

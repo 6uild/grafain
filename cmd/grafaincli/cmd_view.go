@@ -35,7 +35,7 @@ kind of operation are you authorizing.
 			}
 			_, _ = output.Write(pretty)
 
-			// When printing a transaction of a proposal, the embeded in proposal
+			// When printing a transaction of a proposal, the embedded in proposal
 			// message is obfuscated. Extract it and print additionally.
 			_ = printProposalMsg(output, tx)
 			continue

@@ -101,7 +101,6 @@ func TestGenesisInitializer(t *testing.T) {
 	assert.Equal(t, 0, len(first.RoleIds))
 	assert.Equal(t, []Permission{"foo", "bar"}, first.Permissions)
 
-	//assert.Equal(t, "anyValidChecksum", first.Checksum)
 	var second Role
 	if err := b.One(db, weavetest.SequenceID(2), &second); err != nil {
 		t.Fatalf("cannot get second role from the database: %s", err)

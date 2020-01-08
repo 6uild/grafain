@@ -41,7 +41,7 @@ func Start(mgr manager.Manager, rpcAddress, hookServerAddress string, certDir, a
 	})
 	hookServer.Register("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte("Admission hook: " + admissionPath))
+		_, _ = w.Write([]byte("Admission hook: " + admissionPath))
 	}))
 
 	logger.Info("Starting manager", "address", hookServerAddress)

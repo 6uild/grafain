@@ -105,8 +105,8 @@ func addRoleBindings(db weave.KVStore, genesis GenesisRBAC) error {
 	principalBucket := NewPrincipalBucket()
 
 	for i, v := range genesis.RoleBindings {
-		roleIdKey := encodeIDKey(v.RoleID)
-		if err := roleBucket.Has(db, roleIdKey); errors.ErrNotFound.Is(err) {
+		roleIDKey := encodeIDKey(v.RoleID)
+		if err := roleBucket.Has(db, roleIDKey); errors.ErrNotFound.Is(err) {
 			return errors.Wrapf(errors.ErrHuman, "Role dependency not exists: id %d required for binding # %d", v.RoleID, i)
 		}
 		var principals []Principal
@@ -118,7 +118,7 @@ func addRoleBindings(db weave.KVStore, genesis GenesisRBAC) error {
 			return errors.Wrapf(errors.ErrHuman, "Principal dependency not exists: signature %q required for binding # %d", v.Signature.String(), i)
 
 		}
-		if _, err := bucket.Create(db, roleIdKey, v.Signature); err != nil {
+		if _, err := bucket.Create(db, roleIDKey, v.Signature); err != nil {
 			return errors.Wrapf(err, "cannot save #%d role-binding", i)
 		}
 	}

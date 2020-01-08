@@ -69,10 +69,10 @@ func NewRoleBindingBucket() *RoleBindingBucket {
 	}
 }
 
-func (b RoleBindingBucket) Create(db weave.KVStore, roleIdKey []byte, signature weave.Address) ([]byte, error) {
+func (b RoleBindingBucket) Create(db weave.KVStore, roleIDKey []byte, signature weave.Address) ([]byte, error) {
 	r := RoleBinding{
 		Metadata:  &weave.Metadata{Schema: 1},
-		RoleId:    roleIdKey,
+		RoleId:    roleIDKey,
 		Signature: signature,
 	}
 	key := buildKey(r)
@@ -91,8 +91,8 @@ func (b RoleBindingBucket) FindRoleIDsByAddress(db weave.KVStore, a weave.Addres
 	}
 	return r, nil
 }
-func (mb *RoleBindingBucket) Register(name string, r weave.QueryRouter) {
-	mb.Bucket.Register(name, r)
+func (b *RoleBindingBucket) Register(name string, r weave.QueryRouter) {
+	b.Bucket.Register(name, r)
 }
 
 func buildKey(roleBinding RoleBinding) []byte {

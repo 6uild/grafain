@@ -1,4 +1,13 @@
 # Grafain
+[![TravisCI](https://travis-ci.org/6uild/grafain.svg?branch=master)](https://travis-ci.org/6uild/grafain)
+[![GoDoc](https://godoc.org/github.com/6uild/grafain?status.svg)](https://godoc.org/github.com/6uild/grafain)
+
+<!-- [![codecov](https://codecov.io/gh/6uild/grafain/branch/master/graph/badge.svg)](https://codecov.io/gh/6uild/grafain) -->
+[![Go Report Card](https://goreportcard.com/badge/github.com/6uild/grafain)](https://goreportcard.com/report/github.com/6uild/grafain)
+<!-- [![Known Vulnerabilities](https://snyk.io/test/github/6uild/grafain/badge.svg)](https://snyk.io/test/github/6uild/grafain) -->
+[![LoC](https://tokei.rs/b1/github/6uild/grafain)](https://github.com/6uild/grafain)
+<!-- [![GolangCI](https://golangci.com/badges/github.com/6uild/grafain.svg)](https://golangci.com/r/github.com/6uild/grafain) -->
+<!-- [![license](https://img.shields.io/github/license/6uild/grafain.svg)](https://github.com/6uild/grafain/blob/master/LICENSE) -->
 
 **Secure** Kubernetes admission policy management and replication **across data centers.** 
 
