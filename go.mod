@@ -17,7 +17,7 @@ require (
 	github.com/tyler-smith/go-bip39 v1.0.1-0.20181017060643-dbb3b84ba2ef
 	golang.org/x/crypto v0.0.0-20190513172903-22d7a77e9e5f
 	k8s.io/api v0.0.0-20190918195907-bd6ac527cfd2
-	k8s.io/apimachinery v0.0.0-20190817020851-f2f3a405f61d
+	k8s.io/apimachinery v0.15.7
 	k8s.io/client-go v0.0.0-20190918200256-06eb1244587a
 	sigs.k8s.io/controller-runtime v0.3.0
 )
